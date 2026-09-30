@@ -27,7 +27,7 @@ Examples of unacceptable behavior:
 
 ## Enforcement responsibilities
 
-The project maintainer (@Jarroslav) is responsible for clarifying and
+The project maintainer (@kinnister) is responsible for clarifying and
 enforcing standards of acceptable behavior and will take appropriate,
 corrective action in response to any instances of unacceptable behavior.
 
@@ -41,7 +41,7 @@ project in public spaces.
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
 reported to the maintainer by email at the address on the
-[owner's GitHub profile](https://github.com/Jarroslav), or via a direct
+[owner's GitHub profile](https://github.com/kinnister), or via a direct
 message on GitHub. (Security vulnerabilities have their own separate report
 channel — see [`SECURITY.md`](SECURITY.md) — please don't mix the two.) All
 complaints will be reviewed and investigated promptly and fairly.

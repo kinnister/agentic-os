@@ -242,7 +242,7 @@
       { sym: 'Cannot find agentic-os in Browse Marketplace search', fix: 'Expected — it is a custom marketplace. Add it by URL, then install from the User tab.' },
       { sym: 'Marketplace added but no plugin cards', fix: 'You registered the repo but did not Install each plugin. Install both, then reload.' },
       { sym: 'Hundreds of skills listed, can’t find agentic-init', fix: 'That’s the flat Rules/Skills list, not the install view. Open Customize → Plugins.' },
-      { sym: 'Used the GitHub browser URL', fix: 'The marketplace URL must end in .git: https://github.com/Jarroslav/agentic-os.git' }
+      { sym: 'Used the GitHub browser URL', fix: 'The marketplace URL must end in .git: https://github.com/kinnister/agentic-os.git' }
     ];
     var claude = [
       { sym: '/plugin marketplace add fails', fix: 'Check GitHub access; or clone locally and add the absolute path instead.' },
@@ -468,12 +468,12 @@
       step2 = '<p class="text-muted" style="font-size:13.5px;margin:0">agentic-os is a <strong>custom marketplace</strong> — you will not find it by searching Browse Marketplace → All. Add the marketplace once, then install from the <strong>User</strong> tab.</p>' +
         '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;margin:6px 0 2px">' +
         mockFig('Customize · Plugins', skel('60%') + skel('45%') + '<div style="margin-top:4px;align-self:flex-start;border:1px solid var(--color-accent);color:var(--color-accent);border-radius:6px;padding:4px 9px;font-size:10.5px">+ Add marketplace</div>', '<strong>A.</strong> Customize → Plugins → <strong>Add marketplace</strong>') +
-        mockFig('Add marketplace', '<div style="border:1px solid var(--color-accent);border-radius:6px;padding:5px 8px;font-family:ui-monospace,monospace;font-size:9.5px;color:var(--color-accent-300);overflow:hidden;white-space:nowrap;text-overflow:ellipsis">…/Jarroslav/agentic-os.git</div>' + skel('40%'), '<strong>B.</strong> Paste the Git URL — must end in <code style="font-family:ui-monospace,monospace">.git</code>') +
+        mockFig('Add marketplace', '<div style="border:1px solid var(--color-accent);border-radius:6px;padding:5px 8px;font-family:ui-monospace,monospace;font-size:9.5px;color:var(--color-accent-300);overflow:hidden;white-space:nowrap;text-overflow:ellipsis">…/kinnister/agentic-os.git</div>' + skel('40%'), '<strong>B.</strong> Paste the Git URL — must end in <code style="font-family:ui-monospace,monospace">.git</code>') +
         mockFig('<span style="color:var(--color-accent-300)">User</span> · All', installRow('agentic-os') + installRow('Agentic SDLC'), '<strong>C.</strong> <strong>User</strong> tab — install both plugins') +
         mockFig('Browse · All', '<div style="border:1px solid var(--color-divider);border-radius:6px;padding:5px 8px;font-size:10px;color:var(--color-neutral-400)">🔍 superpowers</div>' +
           '<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;border:1px solid var(--color-divider);border-radius:6px;padding:5px 8px;font-size:10px"><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Superpowers <span style="color:var(--color-neutral-500)">≥ 6.1.0</span></span><span style="color:var(--color-accent);flex:none">Install</span></div>', '<strong>D.</strong> Superpowers from Browse → <strong>All</strong> (public)') +
         '</div>' +
-        cmdBox('https://github.com/Jarroslav/agentic-os.git', 'Copy URL') +
+        cmdBox('https://github.com/kinnister/agentic-os.git', 'Copy URL') +
         '<p class="text-muted" style="font-size:13px;margin:0"><strong>E.</strong> Reload: <kbd style="border:1px solid var(--color-divider);border-radius:4px;padding:1px 5px;font-size:11px">Cmd/Ctrl+Shift+P</kbd> → “Developer: Reload Window”. All three plugins should show as cards (often tagged <em>Imported</em>). The flat “Rules, Skills, Subagents” list is <em>not</em> the install view.</p>';
     } else {
       var slash = function (cmd) {
@@ -481,7 +481,7 @@
       };
       step2 = '<p class="text-muted" style="font-size:13.5px;margin:0">Three slash commands in any Claude Code session, plus Superpowers:</p>' +
         '<div style="background:var(--color-neutral-900);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:6px">' +
-        slash('/plugin marketplace add Jarroslav/agentic-os') +
+        slash('/plugin marketplace add kinnister/agentic-os') +
         slash('/plugin install agentic-os@agentic-os') +
         slash('/plugin install agentic-sdlc@agentic-os') + '</div>' +
         '<p class="text-muted" style="font-size:13px;margin:0">Superpowers ≥ 6.1.0 (required dependency):</p>' +
@@ -535,7 +535,7 @@
         '</div></section>' +
         '<div class="card" style="flex-direction:row;gap:12px;align-items:flex-start;border:1px dashed var(--color-divider);background:transparent">' +
         '<i class="ph ph-buildings" style="color:var(--color-accent);font-size:16px;margin-top:1px"></i>' +
-        '<p class="text-muted" style="margin:0;font-size:12.5px"><strong style="color:var(--color-text);font-weight:500">Corporate network?</strong> If the marketplace won’t add, IT may block GitHub or custom marketplaces. Share this with them: access to <code style="font-family:ui-monospace,monospace">github.com/Jarroslav/agentic-os</code>, the plugin-marketplace feature enabled, and outbound HTTPS for editor updates.</p></div>'
+        '<p class="text-muted" style="margin:0;font-size:12.5px"><strong style="color:var(--color-text);font-weight:500">Corporate network?</strong> If the marketplace won’t add, IT may block GitHub or custom marketplaces. Share this with them: access to <code style="font-family:ui-monospace,monospace">github.com/kinnister/agentic-os</code>, the plugin-marketplace feature enabled, and outbound HTTPS for editor updates.</p></div>'
       : '';
 
     return '<main style="max-width:880px;margin:0 auto;padding:28px 22px 70px">' +

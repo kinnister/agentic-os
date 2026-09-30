@@ -2,7 +2,7 @@
 
 `main` is protected: **no direct pushes — by anyone, including the owner.** Every
 change lands through a pull request whose `gate` and `mcp` CI checks pass. Pull
-requests from contributors also require review from a code owner (@Jarroslav).
+requests from contributors also require review from a code owner (@kinnister).
 
 ## Workflow
 
@@ -28,7 +28,7 @@ gh pr create --fill --base main
 CI (`.github/workflows/ci.yml`) re-runs the hook unit tests and the T1–T8
 acceptance matrix (the `gate` job) and, separately, builds and tests the `mcp/`
 server on Node 20 and 22 (the `mcp` job, shown as `mcp (20)` / `mcp (22)`).
-Both are required checks — a red run on either blocks merge. `@Jarroslav` is a
+Both are required checks — a red run on either blocks merge. `@kinnister` is a
 code owner, so the PR requests their review automatically.
 
 > Branch protection must be configured to require both `gate` and every `mcp`
@@ -129,7 +129,7 @@ releases as **`agentic-os-mcp-v<X.Y.Z>`**, matching its npm package name so a
 tag, a GitHub release, and a published version line up. Its version is
 asserted against the running server by a contract test. The package
 (`agentic-os-mcp`) is published on npm and listed in the MCP Registry as
-`io.github.Jarroslav/agentic-os`.
+`io.github.kinnister/agentic-os`.
 
 ## Commit style
 

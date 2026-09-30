@@ -1,11 +1,11 @@
 # agentic-os-mcp
 
-<!-- mcp-name: io.github.Jarroslav/agentic-os -->
+<!-- mcp-name: io.github.kinnister/agentic-os -->
 
 [![npm](https://img.shields.io/npm/v/agentic-os-mcp)](https://www.npmjs.com/package/agentic-os-mcp)
 [![npm downloads](https://img.shields.io/npm/dw/agentic-os-mcp)](https://www.npmjs.com/package/agentic-os-mcp)
 [![License: Apache-2.0](https://img.shields.io/npm/l/agentic-os-mcp)](../LICENSE)
-[![Glama MCP server](https://glama.ai/mcp/servers/Jarroslav/agentic-os/badges/score.svg)](https://glama.ai/mcp/servers/Jarroslav/agentic-os)
+[![Glama MCP server](https://glama.ai/mcp/servers/kinnister/agentic-os/badges/score.svg)](https://glama.ai/mcp/servers/kinnister/agentic-os)
 
 Read-only MCP server for the agentic-os methodology: governance
 (**agentic-os**), the SDLC pipeline (**agentic-sdlc**), and Quality

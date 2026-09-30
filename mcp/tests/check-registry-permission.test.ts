@@ -13,58 +13,58 @@ import {
 
 describe('isResourceMatch (mirrors upstream internal/auth/jwt.go)', () => {
   it('matches a wildcard prefix pattern', () => {
-    expect(isResourceMatch('io.github.Jarroslav/agentic-os', 'io.github.Jarroslav/*')).toBe(true);
+    expect(isResourceMatch('io.github.kinnister/agentic-os', 'io.github.kinnister/*')).toBe(true);
   });
 
-  it('is case-sensitive: lowercase grant does not cover a capitalized name', () => {
-    expect(isResourceMatch('io.github.Jarroslav/agentic-os', 'io.github.jarroslav/*')).toBe(false);
+  it('is case-sensitive: capitalized grant does not cover the lowercase login', () => {
+    expect(isResourceMatch('io.github.kinnister/agentic-os', 'io.github.Kinnister/*')).toBe(false);
   });
 
   it('is case-sensitive the other way too', () => {
-    expect(isResourceMatch('io.github.jarroslav/agentic-os', 'io.github.Jarroslav/*')).toBe(false);
+    expect(isResourceMatch('io.github.Kinnister/agentic-os', 'io.github.kinnister/*')).toBe(false);
   });
 
   it('matches an exact (non-wildcard) pattern only exactly', () => {
-    expect(isResourceMatch('io.github.Jarroslav/agentic-os', 'io.github.Jarroslav/agentic-os')).toBe(true);
-    expect(isResourceMatch('io.github.Jarroslav/agentic-os-2', 'io.github.Jarroslav/agentic-os')).toBe(false);
+    expect(isResourceMatch('io.github.kinnister/agentic-os', 'io.github.kinnister/agentic-os')).toBe(true);
+    expect(isResourceMatch('io.github.kinnister/agentic-os-2', 'io.github.kinnister/agentic-os')).toBe(false);
   });
 
   it('does not match an unrelated namespace', () => {
-    expect(isResourceMatch('io.github.Jarroslav/agentic-os', 'io.github.someoneelse/*')).toBe(false);
+    expect(isResourceMatch('io.github.kinnister/agentic-os', 'io.github.someoneelse/*')).toBe(false);
   });
 });
 
 describe('checkPermission', () => {
   it('finds a covering publish permission', () => {
-    const matches = checkPermission('io.github.Jarroslav/agentic-os', [
-      { action: 'publish', resource: 'io.github.Jarroslav/*' },
+    const matches = checkPermission('io.github.kinnister/agentic-os', [
+      { action: 'publish', resource: 'io.github.kinnister/*' },
     ]);
     expect(matches).toHaveLength(1);
   });
 
   it('returns empty when the only grant is a case mismatch (the CRITICAL 1 bug)', () => {
-    const matches = checkPermission('io.github.Jarroslav/agentic-os', [
-      { action: 'publish', resource: 'io.github.jarroslav/*' },
+    const matches = checkPermission('io.github.kinnister/agentic-os', [
+      { action: 'publish', resource: 'io.github.Kinnister/*' },
     ]);
     expect(matches).toEqual([]);
   });
 
   it('ignores permissions for a different action (e.g. edit)', () => {
-    const matches = checkPermission('io.github.Jarroslav/agentic-os', [
-      { action: 'edit', resource: 'io.github.Jarroslav/*' },
+    const matches = checkPermission('io.github.kinnister/agentic-os', [
+      { action: 'edit', resource: 'io.github.kinnister/*' },
     ]);
     expect(matches).toEqual([]);
   });
 
   it('returns empty for an empty permissions array', () => {
-    expect(checkPermission('io.github.Jarroslav/agentic-os', [])).toEqual([]);
+    expect(checkPermission('io.github.kinnister/agentic-os', [])).toEqual([]);
   });
 
   it('ignores malformed permission entries instead of throwing', () => {
-    const matches = checkPermission('io.github.Jarroslav/agentic-os', [
+    const matches = checkPermission('io.github.kinnister/agentic-os', [
       null,
       { action: 'publish' }, // no resource field
-      { action: 'publish', resource: 'io.github.Jarroslav/*' },
+      { action: 'publish', resource: 'io.github.kinnister/*' },
     ] as unknown as Array<{ action: string; resource: string }>);
     expect(matches).toHaveLength(1);
   });

@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://jarroslav.github.io/agentic-os/sitemap.xml
+Sitemap: https://kinnister.github.io/agentic-os/sitemap.xml

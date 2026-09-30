@@ -5,10 +5,10 @@
   "description": "Consolidated agentic SDLC toolkit for coding agents: knowledge foundation, story drafting, requirements -> spec -> plan -> QA, MR/PR creation and watch, knowledge harvester, and an interactive pipeline map (sdlc.html).",
   "author": {
     "name": "Yaroslav Krivushenko",
-    "url": "https://github.com/Jarroslav"
+    "url": "https://github.com/kinnister"
   },
-  "homepage": "https://github.com/Jarroslav/agentic-os",
-  "repository": "https://github.com/Jarroslav/agentic-os",
+  "homepage": "https://github.com/kinnister/agentic-os",
+  "repository": "https://github.com/kinnister/agentic-os",
   "license": "Apache-2.0",
   "keywords": [
     "sdlc",
