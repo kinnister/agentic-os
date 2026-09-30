@@ -4,9 +4,9 @@
 
 Please **do not** open a public GitHub issue for a suspected security
 vulnerability. Instead, use
-[GitHub's private vulnerability reporting](https://github.com/Jarroslav/agentic-os/security/advisories/new)
+[GitHub's private vulnerability reporting](https://github.com/kinnister/agentic-os/security/advisories/new)
 for this repository, or email the maintainer directly at the address on the
-[owner's GitHub profile](https://github.com/Jarroslav).
+[owner's GitHub profile](https://github.com/kinnister).
 
 Include:
 

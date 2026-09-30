@@ -4,10 +4,10 @@
   "description": "Governed agent architecture installer and verifier with mature-repository adoption for Codex, Claude, and Cursor.",
   "author": {
     "name": "Yaroslav Krivushenko",
-    "url": "https://github.com/Jarroslav"
+    "url": "https://github.com/kinnister"
   },
-  "homepage": "https://github.com/Jarroslav/agentic-os",
-  "repository": "https://github.com/Jarroslav/agentic-os",
+  "homepage": "https://github.com/kinnister/agentic-os",
+  "repository": "https://github.com/kinnister/agentic-os",
   "license": "Apache-2.0",
   "keywords": [
     "agents",

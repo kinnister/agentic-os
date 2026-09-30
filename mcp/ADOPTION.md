@@ -7,7 +7,7 @@ verifies that the submitter owns the repo.
 
 **Do none of this until the package is actually published.** The prerequisite
 is [RELEASE.md](RELEASE.md): npm shows the version (`npm view agentic-os-mcp`)
-and the MCP Registry lists `io.github.Jarroslav/agentic-os`. Every directory
+and the MCP Registry lists `io.github.kinnister/agentic-os`. Every directory
 below either ingests from the Registry or links to a live package; submitting
 earlier produces dead listings.
 
@@ -30,7 +30,7 @@ because each later one is easier once the earlier ones exist:
 
 ## 1. Glama — listed; scoring needs a release
 
-**Listed:** <https://glama.ai/mcp/servers/Jarroslav/agentic-os> (submitted and
+**Listed:** <https://glama.ai/mcp/servers/kinnister/agentic-os> (submitted and
 approved 2026-07-23). Glama clones and continuously syncs the repo from here on,
 so pushes land in the listing without further action.
 
@@ -42,9 +42,9 @@ Notes for anyone repeating this, or listing a future server:
   cannot be automated or done by an agent on your behalf.
 - Submissions are **human-reviewed** before becoming publicly visible; the
   listing URL 404s until approval. Check your Glama account for the status.
-- The listing slug has **no `@`**: `/mcp/servers/Jarroslav/agentic-os`.
+- The listing slug has **no `@`**: `/mcp/servers/kinnister/agentic-os`.
 - The score badge is live and is on `mcp/README.md`:
-  `https://glama.ai/mcp/servers/Jarroslav/agentic-os/badges/score.svg`
+  `https://glama.ai/mcp/servers/kinnister/agentic-os/badges/score.svg`
 
 ### Being listed is not being scored
 
@@ -74,7 +74,7 @@ getting *listed*; it is false for getting *scored*, which is why one now exists.
 - **`/.dockerignore`** — note it deliberately does *not* exclude `.git`, per
   the point above; it does exclude `.claude/worktrees`, which would otherwise
   send a second full checkout as build context.
-- **`/glama.json`** — `{"$schema": …, "maintainers": ["Jarroslav"]}`, the one
+- **`/glama.json`** — `{"$schema": …, "maintainers": ["kinnister"]}`, the one
   required field of <https://glama.ai/mcp/schemas/server.json>. Glama detects
   it within minutes of the push.
 - **Tool definitions hardened against the six TDQS dimensions** (purpose
@@ -96,7 +96,7 @@ a live preview. The generated file already does the clone for you:
 FROM debian:trixie-slim
 # … installs ca-certificates, curl, git, Node (via NodeSource), mcp-proxy, uv/python
 WORKDIR /app
-RUN git clone https://github.com/Jarroslav/agentic-os . && git checkout <sha>
+RUN git clone https://github.com/kinnister/agentic-os . && git checkout <sha>
 CMD ["mcp-proxy", "--", …your start command…]
 ```
 
@@ -200,7 +200,7 @@ glyph — the anchor is `#developer-tools`).
 Developer Tools section):
 
 ```
-- [Jarroslav/agentic-os](https://github.com/Jarroslav/agentic-os) 📇 🏠 🍎 🪟 🐧 - Read-only server exposing the agentic-os governance, SDLC, and QE methodology to any MCP host; never writes to your repo and never executes code. Ships install planning and install verification.
+- [kinnister/agentic-os](https://github.com/kinnister/agentic-os) 📇 🏠 🍎 🪟 🐧 - Read-only server exposing the agentic-os governance, SDLC, and QE methodology to any MCP host; never writes to your repo and never executes code. Ships install planning and install verification.
 ```
 
 Keep the description to one line and factual — over-claiming is the fastest way

@@ -20,7 +20,7 @@ package is broken, the fix is a **new** version, not a redo of the old one.
    - Log in to npmjs.com as the account that owns `agentic-os-mcp`.
    - Package page → Settings → **Publishing access / Trusted publisher** →
      GitHub Actions, with:
-     - organization or user: `Jarroslav`
+     - organization or user: `kinnister`
      - repository: `agentic-os`
      - workflow filename: `release.yml`
      - environment: leave empty (the workflow declares none)
@@ -42,7 +42,7 @@ package is broken, the fix is a **new** version, not a redo of the old one.
      that step.
 3. **The MCP Registry namespace case has already been confirmed — read this
    before touching it again.** `mcp/package.json`'s `mcpName` and
-   `mcp/server.json`'s `name` are both `io.github.Jarroslav/agentic-os`
+   `mcp/server.json`'s `name` are both `io.github.kinnister/agentic-os`
    (capital `J`), matching the real GitHub owner login exactly.
 
    **How this was confirmed, and why "run `mcp-publisher login github` and
@@ -87,11 +87,11 @@ package is broken, the fix is a **new** version, not a redo of the old one.
    - `internal/auth/jwt.go`'s `isResourceMatch` is `strings.HasPrefix`,
      case-sensitive, with zero `ToLower` calls anywhere in that file,
      `publish.go`, or `github_oidc.go`.
-   - This repo's actual GitHub owner login is `Jarroslav` (capital `J`) —
-     confirmed via `gh api repos/Jarroslav/agentic-os --jq .owner.login`.
-   - So the grant is `io.github.Jarroslav/*`, and `mcpName` / `name` must be
-     `io.github.Jarroslav/agentic-os` to match. **Lowercase
-     (`io.github.jarroslav/...`) is wrong and would 403 at the Registry
+   - This repo's actual GitHub owner login is `kinnister` (all lowercase) —
+     confirmed via `gh api repos/kinnister/agentic-os --jq .owner.login`.
+   - So the grant is `io.github.kinnister/*`, and `mcpName` / `name` must be
+     `io.github.kinnister/agentic-os` to match. **A differently-cased owner
+     (`io.github.Kinnister/...`) is wrong and would 403 at the Registry
      publish step — after npm publish has already succeeded and burned the
      version number.** This was caught before the first release, not after.
    - One correction to the field name, for anyone re-deriving this from the

@@ -168,7 +168,7 @@ Releases are tagged `agentic-os-mcp-v<X.Y.Z>`.
   resumes just the post-npm steps if one of them fails, without skipping the
   gate or re-running `npm publish`. See `mcp/RELEASE.md` for the maintainer
   runbook this workflow implements, including how the Registry namespace
-  case (`io.github.Jarroslav/agentic-os`, matching the real GitHub owner
+  case (`io.github.kinnister/agentic-os`, matching the real GitHub owner
   login exactly) was confirmed.
 - `list_presets` — the seven agentic-os role presets with HITL default,
   orchestration mode, and SDLC skills.
