@@ -1,0 +1,195 @@
+# Runtime contracts
+
+Generated from runtime/agentic_runtime/registry.json; do not edit.
+
+Contract version: `1.0.0`.
+
+These definitions do not certify host enforcement or implement lifecycle persistence.
+
+## Phases
+
+| Identifier | Definition |
+|---|---|
+| `0` | `{"name": "preflight"}` |
+| `1` | `{"name": "intake"}` |
+| `2` | `{"name": "feature-branch"}` |
+| `3` | `{"name": "effort-sizing"}` |
+| `4` | `{"name": "specification"}` |
+| `5` | `{"name": "planning"}` |
+| `6` | `{"name": "qa-checklist"}` |
+| `7` | `{"name": "implementation"}` |
+| `8` | `{"name": "qa-test-review"}` |
+| `9` | `{"name": "code-review"}` |
+| `10` | `{"name": "verification"}` |
+| `11` | `{"name": "qa-health"}` |
+| `12` | `{"name": "handoff"}` |
+
+## Gates
+
+| Identifier | Definition |
+|---|---|
+| `requirements.ambiguous` | `{"phase": 1}` |
+| `classification.confirm` | `{"phase": 1}` |
+| `spec.clarification` | `{"phase": 4}` |
+| `spec.approved` | `{"phase": 4}` |
+| `plan.approved` | `{"phase": 5}` |
+| `qa-checklist.approved` | `{"phase": 6}` |
+| `qa-tests.approved` | `{"phase": 8}` |
+| `code-review.final` | `{"phase": 9}` |
+| `code-review.check` | `{"phase": 9}` |
+| `qa.drift` | `{"phase": 10}` |
+| `feature.verification` | `{"phase": 10}` |
+
+## Loops
+
+| Identifier | Definition |
+|---|---|
+| `spec.revision` | `{"max_retries": 3, "on_cap": "halt"}` |
+| `plan.revision` | `{"max_retries": 3, "on_cap": "halt"}` |
+| `evidence.retry:<task-id>` | `{"max_retries": 2, "on_cap": "escalate"}` |
+| `qa-test-review.retry` | `{"max_retries": 1, "on_cap": "escalate"}` |
+| `code-review.fixup` | `{"max_retries": 2, "on_cap": "halt"}` |
+| `gate-runner.retry` | `{"max_retries": 2, "on_cap": "escalate"}` |
+| `acceptance-check.retry` | `{"max_retries": 2, "on_cap": "escalate"}` |
+| `arbiter.malformed.retry` | `{"max_retries": 1, "on_cap": "escalate"}` |
+
+## Retry Semantics
+
+```json
+"maximum retries after the initial attempt; exhausted budgets prevent new attempts, never invalidate successful results"
+```
+
+## Run States
+
+| Identifier | Definition |
+|---|---|
+| `pending` | `["running", "cancelled"]` |
+| `running` | `["waiting_for_user", "interrupted", "reconciliation_required", "completed", "failed", "cancelled"]` |
+| `waiting_for_user` | `["running", "interrupted", "cancelled"]` |
+| `interrupted` | `["running", "reconciliation_required", "cancelled"]` |
+| `reconciliation_required` | `["running", "interrupted", "failed", "cancelled"]` |
+| `completed` | `[]` |
+| `failed` | `[]` |
+| `cancelled` | `[]` |
+
+## Artifacts
+
+| Identifier | Definition |
+|---|---|
+| `database` | `".agentic/state/runtime.sqlite3"` |
+| `run_exports` | `".agentic/runs/<run-id>/"` |
+| `human_documents` | `"docs/superpowers/"` |
+| `specifications` | `"docs/superpowers/specs/"` |
+| `plans` | `"docs/superpowers/plans/"` |
+| `memory` | `".agents/memory/<role>/"` |
+| `configuration` | `".agentic/agentic-sdlc/config.json"` |
+| `installation_receipt` | `".agentic/agentic-os/install.json"` |
+| `task_evidence` | `"evidence/<task-id>.json"` |
+
+## Policy Defaults
+
+| Identifier | Definition |
+|---|---|
+| `max_dispatches` | `64` |
+| `active_run_minutes` | `120` |
+| `max_concurrent_workers` | `3` |
+| `worker_minutes` | `15` |
+| `max_messages_per_worker` | `8` |
+| `max_message_bytes` | `8192` |
+| `max_outstanding_questions` | `1` |
+| `question_reply_seconds` | `300` |
+| `max_question_rounds` | `2` |
+| `classification` | `"story"` |
+| `mode` | `"hitl"` |
+| `escalate_on` | `["security", "breaking-change", "migration", "spend"]` |
+
+## Classifications
+
+| Identifier | Definition |
+|---|---|
+| `story` | `{"max_concurrent_workers": 3, "phases": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]}` |
+| `bug` | `{"max_concurrent_workers": 2, "phases": [0, 1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12]}` |
+| `hotfix` | `{"max_concurrent_workers": 1, "phases": [0, 1, 2, 3, 5, 7, 9, 10, 12]}` |
+| `spike` | `{"max_concurrent_workers": 1, "phases": [0, 1, 4, 12]}` |
+| `epic` | `{"max_concurrent_workers": 1, "phases": [0, 1]}` |
+
+## Entrypoints
+
+| Identifier | Definition |
+|---|---|
+| `sdlc-auto` | `{"mode": "autonomous"}` |
+| `sdlc-guided` | `{"mode": "hitl"}` |
+| `sdlc-engine` | `{"mode": "hitl"}` |
+| `sdlc-brief` | `{"mode": "hitl"}` |
+| `sdlc-direct` | `{"mode": "hitl"}` |
+| `qa-baseline` | `{"mode": "hitl"}` |
+| `qa-scoping` | `{"mode": "hitl"}` |
+| `qa-case-generator` | `{"mode": "hitl"}` |
+| `qa-e2e-generator` | `{"mode": "hitl"}` |
+| `agentic-init` | `{"mode": "hitl"}` |
+| `agentic-upgrade` | `{"mode": "hitl"}` |
+| `agentic-doctor` | `{"mode": "hitl"}` |
+| `agentic-uninstall` | `{"mode": "hitl"}` |
+
+## Risk Classes
+
+```json
+[
+  "security",
+  "breaking-change",
+  "migration",
+  "spend"
+]
+```
+
+## Message Types
+
+```json
+[
+  "task.assign",
+  "task.progress",
+  "task.completed",
+  "task.failed",
+  "question.request",
+  "question.response",
+  "cancel.request",
+  "escalation.request"
+]
+```
+
+## Role Capabilities
+
+| Identifier | Definition |
+|---|---|
+| `coordinator` | `["dispatch", "transition", "resolve_gate", "ask_user"]` |
+| `worker` | `["read", "edit_owned_files", "verify", "report", "ask_peer", "reply_peer", "request_escalation"]` |
+| `reviewer` | `["read", "verify", "report"]` |
+| `resolver` | `["read", "advise_gate", "report"]` |
+
+## Dependencies
+
+| Identifier | Definition |
+|---|---|
+| `python` | `">=3.10"` |
+| `superpowers` | `">=6.1.0"` |
+
+## Roles
+
+| Identifier | Definition |
+|---|---|
+| `codebase-scout` | `{"capabilities": ["read", "report"]}` |
+| `guide-sync` | `{"capabilities": ["read", "edit_owned_files", "report"]}` |
+| `lead-proxy` | `{"capabilities": ["read", "advise_gate", "report"]}` |
+| `sizing-analyst` | `{"capabilities": ["read", "report"]}` |
+| `story-proxy` | `{"capabilities": ["read", "advise_gate", "report"]}` |
+
+## Configuration Template
+
+| Identifier | Definition |
+|---|---|
+| `schema` | `1` |
+| `mode_defaults` | `{"autonomous": {"escalate_on": "{{ESCALATE_ON}}", "max_clarifying_questions_per_phase": 3}}` |
+| `context_boundaries` | `"suggest"` |
+| `model_tiers` | `{"economy": "inherit", "premium": "inherit", "standard": "inherit"}` |
+| `feature_verification` | `{"allow_dynamic_playwright": true, "app_start_command": "{{APP_START_COMMAND}}", "base_url": "{{BASE_URL}}"}` |
+| `integrations` | `{"github": {"command": "{{MR_ADAPTER}}", "enabled": true}, "ticket": {"adapter": "documented in .agentic/guides/project.md ({{TICKET_ADAPTER}})", "enabled": "{{TICKET_INTEGRATION_ENABLED}}"}}` |

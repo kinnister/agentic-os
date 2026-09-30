@@ -20,6 +20,12 @@ is the second, independent claim — "a real session drove the changed surface
 and it behaved" — and it refuses to let the first claim stand in for the
 second.
 
+For a managed run, record command and verification evidence through
+`evidence.record` or `evidence.ingest` as described in
+`../../references/runtime-authority.md`. The JSON verification files are
+evidence artifacts, not lifecycle authority; refresh compatibility ledgers with
+`legacy.export` rather than appending them directly.
+
 ## Inputs
 
 | Input | Source |

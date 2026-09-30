@@ -7,11 +7,15 @@ model (`references/tokenomics.md`) and is orthogonal to mode routing
 (`references/mode-routing.md`, which picks who resolves gates) and to the V2
 adaptive-mode roadmap item.
 
+Identifiers, phase sets, and defaults are defined only in `runtime/agentic_runtime/registry.json`;
+see generated `references/runtime-contracts.md`. This table is an explanatory mirror.
+The bundled runtime offers contract inspection only; unavailable managed lifecycle operations block.
+
 ## Classification table
 
 | Classification | Phase set (of 0–12) | Skipped | Parallel-worker ceiling |
 |---|---|---|---|
-| `story` (default) | all | — | per `references/parallelism-safety.md` and `plan.md` task waves |
+| `story` (default) | all | — | 3 (subject to safety preconditions) |
 | `bug` | 0,1,2,3,5,6,7,8,9,10,11,12 | 4 (spec) | 2 |
 | `hotfix` | 0,1,2,3,5,7,9,10,12 | 4 (spec), 6 (qa-checklist), 8 (test review), 11 (qa health) | 1 |
 | `spike` | 0,1,4,12 | everything that ships code | 1 |
@@ -28,9 +32,8 @@ Rules the table encodes:
 - **Epic decomposes, never implements.** After Phase 1, invoke the
   `story-author` skill to break the epic into child stories (each becomes a
   local work item); the epic run's handoff lists the children. Each child is
-  its own full run with its own `run_dir` — which is also why epic children
-  are parallel-safe by construction, but still run **sequentially** by
-  default to bound cost and keep review load sane.
+  its own full run with its own run identity. Separate export directories do not provide checkout isolation;
+  children run **sequentially** by default to bound cost and keep review load sane.
 - **Complexity routes within the set.** For `story`, Phase 3 still skips
   Phase 4 below score 15, exactly as before. For `bug`/`hotfix`, Phase 4 is
   skipped by classification regardless of score — but a `split-required`
@@ -56,17 +59,20 @@ the same pattern Phase 3 uses:
 
 Then confirm through the `classification.confirm` gate (`gate-arbiter`):
 HITL always puts the candidate + phase-set consequence in front of the user;
-autonomous fast-paths a high-confidence candidate and escalates a low-
+autonomous checks mandatory escalation policy before fast-pathing a high-confidence candidate and escalates a low-
 confidence one. **The user's override always wins.** Record the verdict like
-any other gate (decisions.jsonl + `decision.recorded`).
+any other gate through the coordinator-owned runtime decision operation, when available.
 
-## Run-state effects
+## Run-state effects (intended lifecycle contract)
 
-- `meta.json.classification` — the confirmed classification.
-- `meta.json.phase_set` — the resolved phase list (integers).
-- Phases outside the set are marked `"skipped"` at initialization, so
-  `sdlc-runs` and the resume contract stay coherent without special cases.
-- Runtime never adds a skipped phase back; if work reveals the classification
-  was wrong (a "bug" that needs a design), halt and ask — reclassification is
-  a human decision, then a new run or an explicit phase-set repair recorded as
-  `status.repaired`.
+- The database `.agentic/state/runtime.sqlite3` is the intended authority once persistence is implemented.
+  `.agentic/runs/<run-id>/` exports are regenerable views; human specifications and plans
+  remain in `docs/superpowers/`.
+- Persist the confirmed classification and phase set through runtime operations, including
+  skipped phases. Never mutate `meta.json` to implement a transition.
+- Run states are `pending`, `running`, `waiting_for_user`, `interrupted`,
+  `reconciliation_required`, `completed`, `failed`, and `cancelled`; allowed transitions
+  come from the registry.
+- A changed classification requires a coordinator-recorded human decision and explicit
+  reconciliation or a new run. Missing lifecycle operations block; The current bundle does not yet
+  implement managed initialization, reclassification, or resume.

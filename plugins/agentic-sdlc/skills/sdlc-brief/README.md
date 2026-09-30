@@ -21,6 +21,6 @@ Default mode runs the fixed inline sequence: brainstorm-lite → spec → plan �
 |---|---|
 | Task size | XS / S / M, asserted by you — the skill does not compute it |
 | Branch | Current feature branch; offers to cut one first if you're on the base branch |
-| Companion plugin | `superpowers` plugin, version >= 5.0.7 |
+| Companion plugin | `superpowers` plugin, version >= 6.1.0 |
 | Optional guides | `.agentic/guides/` for commit conventions and quality-gate definitions — runs fine without it |
 | Artifacts | `docs/superpowers/tasks/<slug>/spec.md` and `plan.md`, kept live through the run and reconciled in `mode: sync` |

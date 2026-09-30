@@ -4,7 +4,7 @@
     {
       "id": 1,
       "prompt": "What SDLC runs do we have going right now?",
-      "expected_output": "Enumerates the run directories under docs/superpowers/runs/, newest first, with each run's current phase and status pulled from meta.json — no writes of any kind.",
+      "expected_output": "Enumerates runs newest first. For SQLite-managed runs it reads current phase and status from run.status/run.export; it uses meta.json only for legacy runs without the database. Makes no writes.",
       "files": [],
       "assertions": [
         {
@@ -20,7 +20,7 @@
     {
       "id": 2,
       "prompt": "Run PROJ-4471 stopped partway through — can you pick it back up?",
-      "expected_output": "Shows the run's current phase and status, then explicitly asks the user to confirm before handing the resume off to sdlc-engine — it does not resume unprompted.",
+      "expected_output": "Shows authoritative status. If this is a SQLite-managed run, asks for confirmation when intent is ambiguous and hands off with its existing run and lease context. If it is a legacy-only run without SQLite, explains that resume is blocked because no supported migration path exists.",
       "files": [],
       "assertions": [
         {
@@ -36,36 +36,36 @@
     {
       "id": 3,
       "prompt": "Resume the run that finished last week, PROJ-4200.",
-      "expected_output": "Checks meta.status first, finds it completed, and refuses to resume or write anything to that run's directory — a completed run is treated as immutable no matter what the user asks for.",
+      "expected_output": "For a SQLite-managed run, checks run.status first; for a legacy run without the database, checks meta.status. If completed, refuses to resume or write anything to that run — completed runs are immutable no matter what the user asks for.",
       "files": [],
       "assertions": [
         {
           "name": "completed-run-refuses-writes",
-          "description": "A run whose meta.status is completed is never written to, and a resume request against it is declined."
+          "description": "SQLite-managed status comes from run.status; legacy status comes from meta.status only when SQLite is absent. A completed run is never written to and a resume request is declined."
         }
       ]
     },
     {
       "id": 4,
       "prompt": "Resume PROJ-4310 — I know it was aborted earlier but we want to pick it up again.",
-      "expected_output": "Surfaces that the run's meta.status is aborted and asks a direct yes/no question before doing anything further; only proceeds to hand off a resume after an explicit yes.",
+      "expected_output": "For a legacy run, surfaces meta.status=aborted and explains that resume is blocked until a supported migration exists; explicit yes cannot bypass that limitation. SQLite-managed terminal states come from run.status and are never resumed.",
       "files": [],
       "assertions": [
         {
-          "name": "aborted-run-needs-explicit-yes",
-          "description": "An aborted run is never resumed on an implicit or assumed confirmation — the skill asks directly and waits."
+          "name": "aborted-legacy-run-fails-closed",
+          "description": "An aborted legacy run without SQLite is not handed to sdlc-engine; explicit yes does not bypass the missing migration path."
         }
       ]
     },
     {
       "id": 5,
       "prompt": "The status for PROJ-4390 looks off — meta.json says phase 4 but I thought it finished phase 6.",
-      "expected_output": "Reads events.jsonl, finds it shows phase 6 already completed, and treats the event log as the source of truth: appends a status.repaired event and corrects the meta.json snapshot to match — never rewrites or truncates events.jsonl itself.",
+      "expected_output": "If SQLite is absent, reads events.jsonl and may append status.repaired plus correct the meta.json snapshot after confirmation. If SQLite exists, treats run.status as authority and does not repair exports or event logs directly.",
       "files": [],
       "assertions": [
         {
           "name": "event-log-wins-over-snapshot",
-          "description": "When meta.json and events.jsonl disagree, the snapshot is corrected to match the append-only log, not the other way around."
+          "description": "Legacy snapshot/log conflicts are corrected only when SQLite is absent. For managed runs, SQLite stays authoritative and compatibility exports are never repaired directly."
         },
         {
           "name": "correction-is-additive",

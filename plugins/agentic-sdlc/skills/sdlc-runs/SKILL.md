@@ -31,10 +31,12 @@ of a command.
 This skill never executes or re-runs a pipeline phase itself. It decides *what*
 should resume and *why*, then delegates the actual execution to `sdlc-engine`.
 
-> Default posture is read-only. The only writes this skill performs on its own
-> are corrective: fixing a stale mutable snapshot to match the append-only
-> event history, and mirroring work-item ledger reconciliation. Anything that
-> restarts pipeline work requires the user to say yes first.
+> Default posture is read-only. When `.agentic/state/runtime.sqlite3` exists,
+> it is the authority. Query it with `run.status`; use `legacy.export` only to
+> regenerate compatibility views. Never repair authoritative state by editing
+> exports, legacy JSONL, or human documents. When SQLite is absent, the legacy
+> reconciliation rules below apply. Anything that restarts pipeline work
+> requires clear user intent; ambiguous requests require a direct question.
 
 ## When to invoke
 
@@ -48,11 +50,11 @@ should resume and *why*, then delegates the actual execution to `sdlc-engine`.
 
 | Rule | Effect |
 |---|---|
-| Completed runs are immutable | Never write to a run whose `meta.status` is `completed`, under any circumstance. |
-| Aborted runs need explicit consent | Never resume a run whose `meta.status` is `aborted` without the user answering yes to a direct prompt. |
-| Event log is append-only | Never rewrite or truncate `events.jsonl`. All corrections are additive appends. |
-| Log beats snapshot | When `meta.json` and `events.jsonl` disagree, treat the event log as ground truth and correct the snapshot — never the other way around. |
-| Resume is single-shot | One resume attempt per invocation. A failed resume leaves the run `interrupted`, not `aborted` — it stays resumable later. |
+| Completed runs are immutable | Never mutate a run whose authoritative state is `completed`, `failed`, or `cancelled`. |
+| Aborted runs need explicit consent | Never resume a legacy run marked `aborted` without the user answering yes to a direct prompt. |
+| Legacy event log is append-only | For runs without SQLite, never rewrite or truncate `events.jsonl`; corrections are additive appends. For SQLite-managed runs, record events through runtime operations and regenerate exports. |
+| Legacy log beats snapshot | Only when SQLite is absent, treat `events.jsonl` as ground truth over `meta.json` and correct the snapshot. For managed runs, SQLite is authoritative. |
+| Resume outcome comes from runtime state | After a failed or unclear SQLite resume, re-read `run.status` and report its actual state; never assume `interrupted`, force a state, or retry blindly. |
 
 Blast-radius shape of this skill's own actions:
 
@@ -103,6 +105,79 @@ layers over the mutable ones when they disagree.
 
 ## Operating steps
 
+If `.agentic/state/runtime.sqlite3` exists, inspect the run through the versioned runtime status/export operations first. Do not infer authoritative state from an older snapshot or event log, and do not apply the legacy repair procedures below.
+If any required runtime operation is missing, stop with a blocked status.
+
+### SQLite-backed run inspection and resume
+
+1. Send `run.status` for the selected run ID. Its state, revision, coordinator
+   lease epoch, and metadata are authoritative. Use `run.export` to inspect
+   assignments, messages, events, evidence, and dispatch reservations. If the
+   user needs the fixed display catalog below, call `legacy.export` first; its
+   regenerated files are for display only, never authority.
+2. If the run is `running`, report its state and do not acquire another lease.
+   Before a planned host restart or interruption, the current coordinator must
+   transition the run to `interrupted` with `run.transition`, then verify that
+   state with `run.status` before stopping. If the coordinator stopped
+   unexpectedly and left the run `running`, this bundle has no lease-expiry
+   takeover operation: report the run as blocked and do not steal its lease.
+   For `interrupted`, `waiting_for_user`, or `reconciliation_required`, proceed
+   only after the confirmation rule below is satisfied. If `waiting_for_user`
+   represents an unresolved gate, inspect `run.export` for its gate ID and
+   artifact reference, verify the current artifact hash, and obtain the user's
+   decision on that specific artifact/action. A resume request alone is not
+   gate approval. Carry the gate ID, artifact reference/hash, and exact user
+   response into the handoff. If the pending gate or current artifact cannot be
+   established, stop and ask rather than advancing. Never resume a terminal run
+   or infer a resume from a stale export.
+3. Before acquiring a lease, preflight both required handoff inputs using the
+   authoritative `run.status` metadata and `run.export` events already read:
+   require a non-empty `task_input` and select exactly one incomplete phase
+   from coordinator-owned runtime phase events. If either check fails or phase
+   selection is ambiguous, stop for reconciliation while leaving the current
+   lifecycle state unchanged. Do not call `run.resume` and do not source either
+   value from a compatibility export.
+4. Send `run.resume` with the same run ID and a new coordinator ID. Immediately
+   query `run.status` again and retain its revision and lease epoch for every
+   subsequent mutation. If resume fails or its outcome is unclear, query
+   `run.status` again and report the actual state; never assume it remains
+   interrupted or retry blindly. A missing database blocks the handoff; do not
+   fall back to legacy files.
+5. Re-read `run.export` after acquiring the lease and verify that the selected
+   incomplete phase still matches the preflight result. If it changed or is no
+   longer unambiguous, transition to `interrupted` under the newly acquired
+   lease, verify with `run.status`, then stop for reconciliation. If the prior state was
+   `reconciliation_required`, resolve each external action's real outcome with
+   `external.reconcile`, using the newly returned coordinator ID, lease epoch,
+   and current revision. Do this before redispatch. If the outcome is unknown,
+   record it as `uncertain`, leave the run blocked in reconciliation, and never
+   repeat the action or infer success.
+6. Resume existing assignment IDs with their recorded owners and acceptance
+   criteria. Do not create replacement assignments to make stale work appear
+   complete. If an owner is unavailable or work cannot be mapped unambiguously
+   to its assignment, record the limitation and escalate rather than altering
+   the assignment history.
+7. Dispatch/resume work under the persisted run and assignment budgets. Record
+   actual dispatch outcomes with `task.result`, and assignment state changes
+   with `assignment.transition`, using current revisions and lease fencing. Do
+   not mark work complete from a worker's narrative alone; validate its owned-
+   path diff and acceptance evidence first.
+8. Before reporting the resumed work complete or handing off, query authoritative
+   state again. Any pending, running, waiting, or escalation-required assignment
+   blocks a completion claim. If this host's adapter cannot produce the trusted
+   claims required by `run.complete`, leave the run active and state that host
+   limitation.
+9. Emit the status line using lifecycle state and metadata from `run.status`,
+   and phase from the runtime phase events selected above. Use the recorded
+   branch/precondition; render any missing display field as `unknown` rather
+   than filling it from a compatibility export.
+
+User-owned files, including checkpoint/fixture inputs, are immutable evidence: preserve them byte-for-byte. Store mutable orchestration progress only in managed runtime state and its regenerable exports. A checkpoint file may identify a run but cannot authorize changes to SQLite or be rewritten to reflect resumed progress.
+
+### Legacy-file operating steps (SQLite absent only)
+
+Use the following numbered operating steps only when `.agentic/state/runtime.sqlite3` does not exist. When it exists, follow the SQLite-backed sequence above and do not read legacy snapshots or event logs as authority.
+
 1. **Enumerate.** List `docs/superpowers/runs/`, sorted by directory name
    descending. If no run was specified, show the list (or the newest run's
    summary) and stop unless the user picks one.
@@ -122,11 +197,18 @@ layers over the mutable ones when they disagree.
 6. **Emit the status line** (verbatim format below).
 7. **If inspecting a specific run**, render the catalog in the fixed order
    below.
-8. **If the user asks to resume**, reconcile the work-item ledgers if needed,
-   select the resume candidate, confirm with the user, then hand off to
-   `sdlc-engine`.
+8. **If the user asks to resume a legacy run**, do not hand it to `sdlc-engine`.
+   The engine requires a SQLite-backed run and there is no supported legacy-state
+   migration path in this bundle. Report that resume is blocked until a
+   supported migration exists; never fabricate a database run from JSON files.
 
 ## Reconciliation rules
+
+These legacy repair procedures apply only when `.agentic/state/runtime.sqlite3`
+is absent. With SQLite present, use the coordinator-fenced runtime operations
+and regenerate compatibility files with `legacy.export`. If a required
+operation is unavailable, block and report it rather than editing exported
+state.
 
 ### Stale-"running" detection
 
@@ -184,32 +266,21 @@ Repair procedure:
 | Success, recorded in JSONL | Still shows pending | Update Markdown, mirror the change. No user confirmation needed — this is forward sync, not conflict repair. |
 | Failure, recorded in JSONL | Shows failure already | Leave the failure in Markdown history as-is. Do not force a reconciliation. Leave the run resumable. |
 
-## Resume mechanics
+## Resume confirmation
 
-> A phase without a terminal `phase.completed` event can't be trusted to have
-> produced valid outputs — so resume always restarts the whole phase rather
-> than trying to salvage or skip partial work. Re-running a phase is treated
-> as idempotent/overwriting for that phase's own deliverables.
+An unambiguous, current user instruction that explicitly names the run and asks
+to resume it (for example, “resume run `<id>”) is confirmation for that resume
+only; it does not approve an unresolved gate, authorize a separate external
+action, or increase a budget. Do not ask for a second confirmation in that
+case unless the planned resume would repeat an external action with an
+uncertain outcome; reconcile that action first. A generic “continue”, a status
+question, or an instruction that does not identify the run is not sufficient:
+show the target phase and overwritten outputs with this prompt and wait for an
+explicit yes. A legacy `aborted` status remains non-resumable in this bundle
+even after explicit yes; approval cannot replace the missing migration path.
+High-risk or external actions still use their own approval gates.
 
-### Resume-candidate selection order
-
-1. First phase with a `phase.started` event and no terminal event.
-2. Else, first phase the snapshot marks `running`.
-3. Else, first pending phase immediately after the last completed one.
-
-### Special-cased phase resume behaviors
-
-| Phase | Resume behavior |
-|---|---|
-| Phase 7 | Skip sub-tasks already committed; dispatch only what's missing. |
-| Phase 9 | Regenerate the review bundle from a fresh diff rather than reusing the prior one. |
-
-All other phases resume by fully re-running, overwriting that phase's prior
-outputs.
-
-### Confirmation
-
-Always confirm before resuming, using this exact template:
+Use this exact template when intent is ambiguous for a SQLite-managed run:
 
 ```text
 Resume by re-running Phase <N> (<phase-name>)? It will overwrite that phase's outputs and continue. (yes/no)
@@ -219,22 +290,27 @@ On anything other than an explicit yes, stop — do not hand off.
 
 ### Handoff
 
-On confirmed resume, dispatch to `sdlc-engine` with:
+For SQLite-managed runs only, hand off after `run.resume` with:
 
 - the run's original mode (hitl or autonomous),
-- `raw_input` sourced from `meta.json.task_input`,
+- `task_input` sourced from authoritative runtime metadata. New runs preserve
+  the original input at creation. If an older managed run lacks it, stop; do
+  not recover it from a mutable compatibility snapshot,
+- the existing `run_id`,
+- the exact `coordinator_id`, `lease_epoch`, and revision returned by `run.resume`,
+- any pending gate ID, current artifact reference/hash, and the user's exact gate response,
 - a resume hint naming Phase `<N>`.
 
-If the resume attempt fails, leave the run `interrupted` — it remains
-resumable on a later invocation. This skill never marks a run `aborted` on a
-failed resume.
+If a resume attempt fails, re-read and report the actual runtime state. Do not
+force it to `interrupted` or mark it `aborted`; only retry after diagnosing the
+failed operation and confirming that no partial state change occurred.
 
 ## Outputs
 
 - **Status line** (machine-parsed, verbatim format):
 
   ```text
-  <run_id>  <mode>  phase=<n>  status=<running|completed|aborted|interrupted>  branch=<branch>
+  <run_id>  <mode>  phase=<n>  status=<pending|running|waiting_for_user|interrupted|reconciliation_required|completed|failed|cancelled|aborted>  branch=<branch>
   ```
 
 - **Catalog display**, for a specific run, in this fixed order:
@@ -246,9 +322,10 @@ failed resume.
   5. `decisions.jsonl` — one row per gate.
   6. `qa-report.md` summary — last 20 lines, only if the file exists.
 
-- **Audit trail**: any reconciliation this skill performs appends
+- **Audit trail**: for legacy runs without SQLite, reconciliation appends
   `status.repaired` and/or `work_item.reconciled` events to `events.jsonl` —
-  never a rewrite, always a new line.
+  never a rewrite, always a new line. For managed runs, record changes through
+  coordinator-fenced runtime operations and regenerate compatibility exports.
 
 - **Resume handoff**: a single dispatch to `sdlc-engine` per the Handoff
   section above, or no handoff at all if the user declines.

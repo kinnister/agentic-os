@@ -32,6 +32,11 @@ Blast radius: **R0** (read-only detection, diff, manifest inspection) plus
 write repo files outside those locations. Run user-provided plan commands
 exactly — no rewriting.
 
+When a managed runtime run exists, record command evidence through
+`evidence.record` or `evidence.ingest` and the gate through `decision.record`;
+use `legacy.export` for compatibility ledgers. See
+`../../references/runtime-authority.md`. A report file alone never advances the run.
+
 ## Inputs
 
 | Input | Meaning | Default |

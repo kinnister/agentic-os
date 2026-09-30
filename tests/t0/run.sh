@@ -177,6 +177,12 @@ expect_contains "  ...names the lane" "outside its lane"
 check "locked: sibling-prefix dir blocked (app/ vs app-legacy/)" 2 "$(ev_file "$SCRATCH/app-legacy/x.ts")" run_in python3 "$WS" block
 printf -- '---\nname: scoped\nwrite_scope:\n  - app/\nforbidden_paths:\n  - app/secrets/\n---\nbody\n' > "$SCRATCH/.agentic/agents/scoped.md"
 check "locked: forbidden path blocked even in scope" 2 "$(ev_file "$SCRATCH/app/secrets/k.ts")" run_in python3 "$WS" block
+printf -- '---\nname: scoped\nreadonly: true\nwrite_scope: []\nforbidden_paths:\n  - "**"\n---\nbody\n' > "$SCRATCH/.agentic/agents/scoped.md"
+check "locked: read-only Bash blocked" 2 '{"tool_name":"Bash","tool_input":{"command":"touch app/x.ts"}}' run_in python3 "$WS" block
+printf -- '---\nname: scoped\nreadonly: true\nwrite_scope: []\n---\nbody\n' > "$SCRATCH/.agentic/agents/scoped.md"
+check "locked: read-only Write blocked without deny glob" 2 "$(ev_file "$SCRATCH/app/x.ts")" run_in python3 "$WS" block
+printf -- '---\nname: scoped\nwrite_scope: []\nforbidden_paths:\n  - "**"\n---\nbody\n' > "$SCRATCH/.agentic/agents/scoped.md"
+check "locked: quoted glob forbidden path blocked" 2 "$(ev_file "$SCRATCH/app/x.ts")" run_in python3 "$WS" block
 # fail-closed (block mode, lock active): a non-string file_path can't be resolved —
 # block, never exit 1. warn mode stays advisory (exit 0) on the same input.
 check "locked: non-string path fails closed (block)" 2 '{"tool_name":"Write","tool_input":{"file_path":123}}' run_in python3 "$WS" block
@@ -184,6 +190,9 @@ check "locked: non-string path advisory (warn)" 0 '{"tool_name":"Write","tool_in
 check "warn mode never blocks" 0 "$(ev_file "$SCRATCH/lib/x.ts")" run_in python3 "$WS" warn
 # null tool_input under an active lock: no path to evaluate → open (exit 0), never exit 1.
 check "locked: null tool_input not exit-1 (block)" 0 '{"tool_name":"Write","tool_input":null}' run_in python3 "$WS" block
+rm "$SCRATCH/.agentic/state/active-agent.json"
+printf '{"agent":}' > "$SCRATCH/.agentic/state/active-agent.json"
+check "broken managed state fails closed" 2 "$(ev_file "$SCRATCH/lib/x.ts")" run_in python3 "$WS" block
 rm "$SCRATCH/.agentic/state/active-agent.json"
 
 echo "-- instruction_gate"

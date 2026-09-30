@@ -19,6 +19,6 @@ Examples:
 
 ## What It Needs
 
-- superpowers plugin >= 5.0.7.
+- superpowers plugin >= 6.1.0.
 - A feature branch (the skill will help create one if you are on the base branch).
 - `.agentic/guides/testing/qa-strategy.md` (from `qa-baseline`) to enable the QA checklist / test review / health-update stages — the flow proceeds without it, just skipping those three stages.

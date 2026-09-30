@@ -11,7 +11,7 @@ separate, explicit step performed by a human or an adapter skill, never automati
 ## Prerequisite
 
 Install and version-check the shared skill-infrastructure plugin before this one loads. Required
-version: **≥ 5.0.7**.
+version: **≥ 6.1.0**.
 
 ```
 /plugin marketplace add <prerequisite-plugin-source>
@@ -107,7 +107,7 @@ instead.
 
 | Hook id | Event | Behavior |
 |---|---|---|
-| `ticket-sync` | Stop / SubagentStop (async) | Transitions the external ticket via the adapter configured in `.agentic/guides/integration/ticket-flow.md`. No mapping file → no-op; `repo-guides` offers to create one when it's missing. |
+| `ticket-sync` | Stop / SubagentStop (async) | Transitions the external ticket via the adapter configured in `.agentic/guides/integration/ticket-flow.md`. Managed SQLite runs require coordinator-fenced `scripts/external-action.py` intent/reconciliation; without that context the hook fails closed. No mapping file → no-op; `repo-guides` offers to create one when it's missing. |
 | `sdlc-stage-guard` | PostToolUse(Skill) | Informational only. After a skill completes mid-run, injects current stage/phase and next-step guidance. Never blocks a tool call or forces a retry. |
 | `usage-sampler` | SubagentStop (async) | Samples the completed subagent's own isolated token usage and appends a normalized `usage.sampled` event to the run's `events.jsonl`. Only fires while the newest run's `meta.json` reports status `running`; every failure path is swallowed and the hook always exits 0. |
 
@@ -133,6 +133,7 @@ three-step order above.
 | `code-review-final.json` | `code-review-orchestrator` | Persisted three-lens verdict. |
 | `references/review-lenses.md` | `code-review-orchestrator` | Canonical definitions of the blind/edge-case/acceptance lenses; owned and read by the orchestrator itself. |
 | `.agentic/guides/integration/ticket-flow.md` | `repo-guides` (on request) | Ticket-flow mapping consulted by `ticket-sync`. |
+| `scripts/external-action.py` | runtime boundary | Records and reconciles coordinator-fenced external adapter effects for managed runs. |
 
 All phase artifacts persist under `.agentic/` and `docs/superpowers/`, alongside the
 `decisions.jsonl` and `events.jsonl` audit ledgers, so a run can resume after a crash without

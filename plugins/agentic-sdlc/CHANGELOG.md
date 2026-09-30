@@ -6,7 +6,94 @@ uses Semantic Versioning and its own release tag (`agentic-sdlc-v<X.Y.Z>`).
 
 ## [Unreleased]
 
+### Runtime and installer reliability
+
+- When uninstall keeps a file, its journal entry now records the bytes and
+  identity actually on disk (a kept generated file keeps its recorded hash, so
+  the user's edit stays detectable).
+
+- Preserve pre-existing settings and identical user files during setup and
+  uninstall, including after a detected user edit. Validate versions and the
+  settings journal before writing; reject unsafe journal entries and anchor
+  file mutations to directory handles against symlink path swaps. Recheck the
+  planned file hash and inode before replacement or deletion; journal each file
+  before advancing, and detect journal edits at the recheck before replacement.
+  Same-byte file replacements with a new inode become user-owned; legacy
+  journal entries without file identity are preserved conservatively.
+  Detected directory replacement during an operation is rejected, and conditional
+  rollback preserves the original inode so a retry can still recognize a
+  managed file.
+  Record nanosecond modification time as well as device and inode, preventing
+  an immediately reused inode from claiming a recreated user file.
+  Generic uninstall now preserves generated files for an individual decision,
+  matching the role-removal contract instead of deleting them automatically.
+
+- Add installer operations for operator decisions so setup, upgrade and
+  uninstall can stop editing files and the journal directly: compare-and-swap
+  confirmations on apply (`expect_sha256`) and remove (`confirm`) that act only
+  while the reviewed bytes are present and never raise a file's ownership;
+  files that existed before agentic-os are never deleted, even when confirmed.
+  Journal entries for managed files already deleted are dropped, unknown
+  file-spec fields are rejected, and `install.record` records answers and
+  progress. A journal containing NaN or Infinity is refused. New files follow
+  the umask, replacements keep their mode without setuid/setgid, and the
+  journal is rewritten owner-only.
+
+- Check all modern stored evidence claims before filtering required checks, so
+  a damaged database row cannot hide a signed failed check by changing its
+  required flag. Worker isolation from coordinator state remains a separate
+  host boundary.
+
+- Retain signed failed required checks and require the latest result of every
+  required command stream in the completion gate; signed receipts now bind
+  command identity and required status so a failed check cannot be hidden by
+  citing an unrelated passing check. Completion revalidates persisted signed
+  claims, so older receipts without those fields require a fresh check.
+
+- Validate `run.start` input, coordinator identity, and the exact Git worktree
+  root before the CLI creates SQLite state, so rejected starts do not leave a
+  pending run or a new `.agentic` directory.
+
+- Treat the shared lifecycle and messaging runtime as experimental; host identity,
+  trusted completion gates, installer integration, and live certification remain
+  incomplete. Unsupported completion and mailbox access fail closed during the
+  bounded remediation of the lifecycle and communication stages.
+- Define SQLite-backed resume and assignment recovery, preserve user-owned
+  checkpoint inputs, keep legacy repair procedures out of managed runs, align
+  resume handoff fields with the runtime contract, and update the resume evals
+  to distinguish SQLite authority from legacy snapshot behavior. Legacy-only
+  resumes now fail closed, and uncertain external actions reconcile only after
+  the recovery coordinator acquires its fenced lease. New runs persist their
+  normalized task input in authoritative metadata for later resume. Planned
+  host interruptions now transition the run to `interrupted`; an unexpected
+  coordinator death while still `running` remains blocked because lease-expiry
+  takeover is not implemented. Worker launch instructions now start a bounded
+  dispatch lease before execution and reconcile expired dispatches explicitly.
+
 ### Added
+
+- Added the coordinator-backed `scripts/external-action.py` boundary. Managed
+  ticket synchronization records external intent before adapter execution and
+  reconciles success, failure, timeout, or launch uncertainty through the
+  authoritative SQLite runtime; missing fencing context still fails closed.
+
+- Added a structured host control matrix to preflight output, identifying which
+  controls are enforced by the runtime, checked before integration, delegated
+  to an adapter, or unsupported at the host boundary.
+
+- Added the versioned `install.merge-settings` operation for atomic,
+  journaled recursive settings merges that preserve user scalar values.
+
+- Added revision-bound command evidence receipts; failed required checks cannot
+  be recorded as successful verification.
+
+- Added durable assignment ownership and typed peer-message envelopes with
+  correlation, stale-revision, duplicate, sender, and payload-limit checks.
+
+- Added the shared SQLite lifecycle runtime with fenced revisions, durable dispatch reservations,
+  external-action reconciliation, and revision-labelled exports.
+
+- Bundle the canonical versioned runtime contracts for independent installation, with deterministic drift checks and strict policy/input validation.
 
 - **`usage.sampled` is now a real event, not just a reserved shape.**
   `references/model-routing.md` documented this event ("Usage sampling (spec

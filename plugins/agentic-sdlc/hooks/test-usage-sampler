@@ -168,6 +168,20 @@ test_run_not_running() {
   cleanup_tmp
 }
 
+# (3) A managed runtime without coordinator fencing must not fall back to a
+# direct compatibility-ledger append.
+test_managed_run_without_runtime_context() {
+  with_tmpdir
+  write_run "running" 3
+  mkdir -p .agentic/state
+  : > .agentic/state/runtime.sqlite3
+  write_agent_transcript agent.jsonl 111 22 5 7
+  assert_silent_exit "managed run without runtime context" \
+    "$(subagent_stop_stdin "codebase-scout" "$TMP/agent.jsonl")"
+  assert_usage_count "managed run without runtime context" "$RUN_DIR/events.jsonl" 0
+  cleanup_tmp
+}
+
 # (3) Mapped role samples correctly: role, tier, tokens, phase, run_id all match.
 test_mapped_role_samples() {
   with_tmpdir
@@ -261,6 +275,7 @@ test_token_fields_roundtrip() {
 # ---------------------------------------------------------------------------
 test_no_run_dir
 test_run_not_running
+test_managed_run_without_runtime_context
 test_mapped_role_samples
 test_unmapped_role_recorded
 test_namespace_prefix_stripped

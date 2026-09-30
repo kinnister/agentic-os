@@ -25,7 +25,7 @@ Checked before a run starts:
 |---|---|
 | Guide files | `.agentic/guides/project.md`, `.agentic/guides/git-workflow.md`, `.agentic/guides/quality-gates.md` |
 | Guide source | produced by the `repo-guides` skill |
-| superpowers plugin | version `5.0.7` or newer |
+| superpowers plugin | version `6.1.0` or newer |
 | Checkout | a feature branch checked out in the current directory — not a git worktree |
 
 > Missing guide files: run `repo-guides` first. Outdated superpowers: update the plugin. Working from a worktree: switch to the real checkout — this skill will not start there.

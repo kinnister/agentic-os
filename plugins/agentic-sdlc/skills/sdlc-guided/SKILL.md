@@ -10,6 +10,23 @@ authors:
 
 # sdlc-guided
 
+## Shared contract preflight
+
+Before workflow actions, send this JSON request to the installed plugin's
+`runtime/run.py` using Python 3.10+ (resolve the plugin root on the current host):
+
+```json
+{"api_version":"1.0.0","operation":"policy.resolve","entrypoint":"sdlc-guided"}
+```
+
+Use the returned policy and `references/runtime-contracts.md` for contract identifiers,
+limits and dependency floors. Unknown fields or incompatible versions block startup.
+Task envelopes use `contract_version: "1.0.0"` and `task_input`; legacy `raw_input`
+is accepted only by the explicit `input.normalize` compatibility adapter with `legacy: true`.
+This preflight validates policy; durable lifecycle and host enforcement are separate
+capabilities. Never infer those capabilities from a successful policy response.
+
+
 The doorway into the human-in-the-loop agentic-sdlc flow. On hosts like Codex
 that have skills but no commands, this stands in for the retired `sdlc:start`
 command.
@@ -22,7 +39,7 @@ skill reads intent and delegates; it does not touch the repository.
 
 Specifically, nothing here may:
 
-- Make `docs/superpowers/runs/<run-id>/`, or any other run or task directory.
+- Make `.agentic/runs/<run-id>/`, or any other run or task directory.
 - Write `meta.json`, `requirements.md`, `complexity.json`, `design.md`,
   `plan.md`, `events.jsonl`, `decisions.jsonl`, `work-item.md`, or any ledger.
 - Do a phase's work early — no intake, no sizing, no brainstorming, no
@@ -45,11 +62,11 @@ they own the same change.
 
 ## Inputs
 
-- `raw_input` — whatever the user is asking for: prose, a tracker reference, or
+- `task_input` — whatever the user is asking for: prose, a tracker reference, or
   a path to a story file
 - `mode_flag` — `--greenfield` when starting from nothing, otherwise unset
 - `escalate_on` — risk flags that force a human decision; defaults to
-  `["security", "breaking-change"]`
+  `["security", "breaking-change", "migration", "spend"]`
 
 ## Usage Examples
 
@@ -61,17 +78,18 @@ Use the sdlc-guided skill with --greenfield "small Go service that signs webhook
 
 ## Steps
 
-1. Take the user's own words as `raw_input` — normalize whitespace, not meaning.
+1. Take the user's own words as `task_input` — normalize whitespace, not meaning.
 2. If `--greenfield` appears, set `mode_flag` to it and treat the rest as
-   `raw_input`.
+   `task_input`.
 3. Call the `sdlc-engine` skill:
 
    ```json
    {
+     "contract_version": "1.0.0",
      "mode": "hitl",
-     "raw_input": "<the user's request, verbatim>",
-     "mode_flag": "<--greenfield, or omitted>",
-     "escalate_on": ["security", "breaking-change"]
+     "task_input": "<the user's request, verbatim>",
+     "mode_flag": null,
+     "escalate_on": ["security", "breaking-change", "migration", "spend"]
    }
    ```
 

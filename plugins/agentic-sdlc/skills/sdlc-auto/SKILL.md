@@ -9,6 +9,23 @@ author: agentic-os
 
 # sdlc-auto
 
+## Shared contract preflight
+
+Before workflow actions, send this JSON request to the installed plugin's
+`runtime/run.py` using Python 3.10+ (resolve the plugin root on the current host):
+
+```json
+{"api_version":"1.0.0","operation":"policy.resolve","entrypoint":"sdlc-auto"}
+```
+
+Use the returned policy and `references/runtime-contracts.md` for contract identifiers,
+limits and dependency floors. Unknown fields or incompatible versions block startup.
+Task envelopes use `contract_version: "1.0.0"` and `task_input`; legacy `raw_input`
+is accepted only by the explicit `input.normalize` compatibility adapter with `legacy: true`.
+This preflight validates policy; durable lifecycle and host enforcement are separate
+capabilities. Never infer those capabilities from a successful policy response.
+
+
 Skill-based entry point for autonomous-mode SDLC runs, for hosts (for example Codex) that
 expose skills but not custom slash commands. Everything this skill does is intent
 normalization and delegation — it holds zero workflow, QA, review, or git logic itself. All
@@ -48,28 +65,29 @@ and production limits apply exactly as they do with someone watching.
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
-| `raw_input` | string | — | Task text, work-item reference, story path, or greenfield idea |
+| `task_input` | string | — | Task text, work-item reference, story path, or greenfield idea |
 | `mode_flag` | string/enum | none | Only `--greenfield` is recognized |
-| `escalate_on` | string[] | `["security", "breaking-change"]` | CSV or list-style input |
+| `escalate_on` | string[] | `["security", "breaking-change", "migration", "spend"]` | CSV or list-style input |
 
-Recognized CLI-style flags inside `raw_input`: `--greenfield`, `--escalate-on`.
+Recognized CLI-style flags inside `task_input`: `--greenfield`, `--escalate-on`.
 
 ## Operating steps
 
 1. **Parse `--greenfield`.** If the input contains `--greenfield "<text>"`, set
-   `mode_flag = "--greenfield"` and capture `<text>` as `raw_input`.
+   `mode_flag = "--greenfield"` and capture `<text>` as `task_input`.
 2. **Parse `--escalate-on`.** If the input contains `--escalate-on <comma-list>`, split the list
    on commas into the `escalate_on` array. If absent, use the default
-   `["security", "breaking-change"]`.
+   `["security", "breaking-change", "migration", "spend"]`.
 3. **Capture the remainder.** Whatever text is left unconsumed by the two flags becomes
-   `raw_input` (verbatim, if no `--greenfield` flag was present).
+   `task_input` (verbatim, if no `--greenfield` flag was present).
 4. **Delegate.** Invoke the `sdlc-engine` skill with `mode: "autonomous"` plus the three
    parsed fields — see payload shape below. Do not run any pipeline phase yourself.
 5. **Gate resolution.** Every judgment gate inside the delegated pipeline resolves through
-   `gate-arbiter`, in this priority order: deterministic checks first, fast-path approvals
-   second, a stand-in subagent invocation only as the last resort.
-6. **Escalation.** The user is interrupted only when: routing confidence is low, or a detected
-   in-flight risk flag intersects the run's `escalate_on` set.
+   `gate-arbiter`, in this priority order: mandatory escalation checks first, deterministic validation next, eligible fast-path
+   approvals next, and an advisory stand-in only when needed. The coordinator owns the decision.
+6. **Escalation.** The coordinator asks the user when confidence is low, a required approval is
+   missing, a budget is exhausted, or a risk flag intersects the run's `escalate_on` set.
+   Silence never grants approval.
 7. **Precondition gate — `repo-guides`.** If required guide files under `.agentic/guides/` are
    absent, the pipeline halts immediately and the user is redirected to run the `repo-guides`
    skill first. This skill never generates guides itself.
@@ -79,8 +97,10 @@ Recognized CLI-style flags inside `raw_input`: `--greenfield`, `--escalate-on`.
 9. **Dirty-tree rule (autonomous mode).** A dirty working tree halts the run unless project
    policy explicitly allows auto-stash. Hard-reset or force-push-forward on a dirty tree is
    disallowed regardless of any other setting.
-10. **Audit.** Every routed decision is appended to `<run_dir>/decisions.jsonl` for the run,
-    regardless of outcome.
+10. **Audit.** Every routed decision is committed through the runtime `decision.record`
+    operation for the run, regardless of outcome. Refresh `<run_dir>/decisions.jsonl` with
+    `legacy.export` only as a compatibility view; never append directly when the runtime is
+    available.
 
 ## Delegation payload
 
@@ -89,17 +109,19 @@ Field names and literal values below are exact — do not rename or restructure 
 
 ```json
 {
+  "contract_version": "1.0.0",
   "mode": "autonomous",
-  "raw_input": "<as captured>",
-  "mode_flag": "<--greenfield or none>",
-  "escalate_on": ["security", "breaking-change"]
+  "task_input": "<as captured>",
+  "mode_flag": null,
+  "escalate_on": ["security", "breaking-change", "migration", "spend"]
 }
 ```
 
 ## Outputs
 
 - A running (or halted-at-gate) `sdlc-engine` invocation in `mode: "autonomous"`.
-- An audit trail at `<run_dir>/decisions.jsonl` covering every routed decision for the run.
+- An authoritative runtime decision ledger, with `<run_dir>/decisions.jsonl` regenerated as a
+  compatibility view for older readers.
 - On success, a branch left at Phase 12 (branch-ready stop point) with no MR/PR opened.
   Hand the result to `mr-submit` (or an equivalent PR tool) as a separate, explicit step.
 - On a precondition failure, a redirect instructing the user to run `repo-guides` before

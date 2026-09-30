@@ -166,6 +166,26 @@ if [ -n "$phase" ]; then phase_json=$phase; else phase_json=null; fi
 
 event="{\"schema\":1,\"ts\":\"$ts\",\"event\":\"usage.sampled\",\"run_id\":\"$esc_run\",\"phase\":$phase_json,\"actor\":\"usage-sampler\",\"summary\":\"$esc_summary\",\"artifacts\":[],\"data\":{\"role\":\"$esc_role\",\"tier\":\"$tier\",\"input_tokens\":$input_tokens,\"output_tokens\":$output_tokens,\"cache_read_input_tokens\":$cache_read,\"cache_creation_input_tokens\":$cache_creation}}"
 
+if [ -f ".agentic/state/runtime.sqlite3" ]; then
+  # Managed runs cannot be advanced by appending a compatibility ledger. A
+  # coordinator supplies the fenced runtime context; without it this async
+  # hook fails closed and leaves reconciliation to the coordinator.
+  [ -n "$AGENTIC_COORDINATOR_ID" ] || bail
+  [ -n "$AGENTIC_LEASE_EPOCH" ] || bail
+  [ -n "$AGENTIC_EXPECTED_REVISION" ] || bail
+  case "$AGENTIC_COORDINATOR_ID" in ''|*[!A-Za-z0-9_.-]*) bail ;; esac
+  case "$AGENTIC_LEASE_EPOCH" in ''|*[!0-9]*) bail ;; esac
+  case "$AGENTIC_EXPECTED_REVISION" in ''|*[!0-9]*) bail ;; esac
+  runtime_run="${CLAUDE_PLUGIN_ROOT:-$HOOK_HOME}/runtime/run.py"
+  [ -f "$runtime_run" ] || bail
+  event_id="usage-${run_id}-${agent_type}-${newest_mtime}"
+  response=$(printf '%s\n' "{\"api_version\":\"1.0.0\",\"operation\":\"event.record\",\"run_id\":\"$esc_run\",\"event_id\":\"$event_id\",\"event_type\":\"usage.sampled\",\"payload\":{\"role\":\"$esc_role\",\"tier\":\"$tier\",\"input_tokens\":$input_tokens,\"output_tokens\":$output_tokens,\"cache_read_input_tokens\":$cache_read,\"cache_creation_input_tokens\":$cache_creation},\"coordinator_id\":\"$AGENTIC_COORDINATOR_ID\",\"lease_epoch\":$AGENTIC_LEASE_EPOCH,\"expected_revision\":$AGENTIC_EXPECTED_REVISION,\"root\":\"$PWD\"}" | python3 "$runtime_run" 2>/dev/null)
+  case "$response" in
+    *'"ok":true'*) exit 0 ;;
+    *) bail ;;
+  esac
+fi
+
 printf '%s\n' "$event" >> "$RUN_DIR/events.jsonl" 2>/dev/null
 
 exit 0

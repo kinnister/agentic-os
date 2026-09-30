@@ -5,6 +5,24 @@ version: 0.1.0
 license: Apache-2.0
 ---
 
+## Shared contract preflight
+
+Before workflow actions, send this JSON request to the installed plugin's
+`runtime/run.py` using Python 3.10+ (resolve the plugin root on the current host):
+
+```json
+{"api_version":"1.0.0","operation":"policy.resolve","entrypoint":"agentic-init"}
+```
+
+Use the returned policy and `references/runtime-contracts.md` for contract identifiers,
+limits and dependency floors. Unknown fields or incompatible versions block startup.
+Task envelopes use `contract_version: "1.0.0"` and `task_input`; legacy `raw_input`
+is accepted only by the explicit `input.normalize` compatibility adapter with `legacy: true`.
+This preflight validates policy; durable lifecycle and host enforcement are separate
+capabilities. Never infer those capabilities from a successful policy response.
+
+
+
 # agentic-init — the installer
 
 You scaffold a governed multi-agent architecture into the **target repo** (the
@@ -40,6 +58,41 @@ idempotent.
 
   Update the journal **after every phase** (and after every file write in
   Phase 4/5). `sha256` of a file: `shasum -a 256 <file> | cut -d' ' -f1`.
+- **How journal and file writes happen.** Never edit `install.json` by hand and
+  never write scaffold files directly; send versioned requests to the plugin's
+  `runtime/run.py` (same envelope as the preflight above, `target` = `TARGET`):
+  - top-level journal fields (`answers`, `stack_discovery`, `adoption`,
+    `follow_ups`, `sdlc_skills`, `qe_blueprints`, `phase`) →
+    `install.record` with `fields`;
+  - rendered or copied files → `install.apply` with
+    `files: {path: {content, template, owner}}` and `agentic_os_version`. The
+    installer journals `sha256`, owner and file identity, and preserves
+    pre-existing or user-modified files on its own (the collision default).
+    It only replaces an unedited `managed` file without a confirmation:
+    rewriting a file the journal records `generated` (an upgrade
+    regeneration, or a Phase 5 audit-loop retry) needs `expect_sha256` = its
+    current sha256 plus `owner: "generated"` — a plain apply preserves it and
+    records it user-owned, so later upgrades stop offering regeneration;
+  - content merged into a file that may already exist (the `CLAUDE.md`
+    block; `.claude/settings.json` after merging the fragment and pruning
+    unscaffolded hooks) → compute the merged text, then `install.apply`:
+    if the file is absent, or journaled `managed` with its recorded sha256
+    still on disk, send `owner: "managed"` and no confirmation; otherwise
+    (pre-existing, user-owned, or edited) send `expect_sha256` = its current
+    sha256 and no owner — it lands user-owned. `install.merge-settings` is a
+    shortcut only when the settings file is absent or an unedited `managed`
+    file and no pruning is needed (it does not take a confirmation);
+  - a collision answer: **rename** → `install.apply` of the `ao-<name>` path;
+    **overwrite** → `install.apply` with `expect_sha256` of the bytes shown
+    (the file stays user-owned: a confirmation never claims ownership).
+  `install.plan` previews the same actions without writing. A refused request
+  means the file changed since it was shown (stale confirmation) or the
+  request was invalid (unknown field, or claiming `managed` under a
+  confirmation for a file the journal does not record as managed): re-read,
+  fix the request or ask again; never fall back to a direct write. Always read
+  the result: `applied`, `preserved` and (for removal) `removed`,
+  `preserved`, `missing` and `unapplied_confirmations` say what actually
+  happened, and a preserved path was not written.
 - **Owner semantics**: `managed` = agentic-os wrote it and may overwrite it on
   upgrade when unmodified; `user` = pre-existed or user-declined — never
   touched again; `generated` = produced by a generator subagent — upgrades
@@ -97,9 +150,11 @@ idempotent.
    resume:
    - Pre-fill every interview answer from `journal.answers`.
    - If `journal.phase != "done"`, resume at the recorded phase.
-   - On a completed re-run, for each journaled file: if its current sha256
-     matches the journal, silently re-render/refresh it; if it differs
-     (user-modified), **skip it and warn** — never overwrite; files not yet
+   - On a completed re-run, for each journaled `owner: "managed"` file: if
+     its current sha256 matches the journal, silently re-render/refresh it; if
+     it differs (user-modified), **skip it and warn** — never overwrite.
+     `owner: "user"` files are never refreshed this way (merge targets such as
+     `CLAUDE.md` follow the merge rule); `generated` ones follow Phase 5; files not yet
      journaled are scaffolded normally. **One exception**:
      `.agentic/guides/agent-registry.md` (`template: "governance/agent-registry"`)
      is **never** blindly re-rendered here, matched sha256 or not — the
@@ -475,8 +530,10 @@ Ordered steps:
      `<!-- agentic-os:end -->` markers). No `CLAUDE.md` ⇒ create it with the
      block as its body. Existing `CLAUDE.md` ⇒ append the block at the end
      (or replace an existing agentic-os block between markers); **never touch
-     content outside the markers**. Journal owner `managed` (the block is the
-     managed unit).
+     content outside the markers**. Write it with init's merge rule ("How
+     journal and file writes happen"): a `CLAUDE.md` agentic-os created stays
+     `managed`; one that pre-existed is merged under `expect_sha256` and stays
+     user-owned.
      The block must promise only what this union installs (the same
      must-not-index principle as `{{QA_GUIDE_ROWS}}`); three derived
      substitutions enforce that:
@@ -639,7 +696,8 @@ Ordered steps:
    existing-guide rules ⇒ AskUserQuestion per file:
    **skip (default)** → journal `owner: "user"`; **rename** → write ours as
    `ao-<name>` alongside (journal the `ao-` path, owner `managed`);
-   **overwrite** → journal owner `managed`. Never overwrite silently.
+   **overwrite** → a confirmed `install.apply` of the bytes shown; the file
+   stays user-owned. Never overwrite silently.
 7. **Templated-agent pointers.** For every `agents/<name>` in the union, after
    rendering the canonical contract to `.agentic/agents/<name>.md`, synthesize
    the two thin pointers exactly per the pointer formats in
@@ -840,7 +898,9 @@ union — qa, ba-po, pm-delivery, portfolio, security, data, design). Otherwise:
    The label is fixed by path, not paraphrased, precisely so an upgrade can
    reproduce the exact same row from the journal without re-reading the guide.
 7. Journal every generated file with `owner: "generated"`, `template:
-   "gen/<slot>"`. If step 6 changed `.agentic/guides/agent-registry.md` or step 6b
+   "gen/<slot>"` — generator subagents return content and the orchestrator
+   writes it with `install.apply`; the index-file re-stamps below are likewise
+   `install.apply` of the mutated content, never a direct write. If step 6 changed `.agentic/guides/agent-registry.md` or step 6b
    changed `PATTERNS.md` this pass, **each** changed index file needs **two**
    re-stamps — both against its current on-disk `sha256` **after** the mutation,
    since Phase 4 journaled and scored it *before* that mutation and neither stamp

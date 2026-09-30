@@ -17,6 +17,23 @@ description: >-
 
 # qa-baseline
 
+## Shared contract preflight
+
+Before workflow actions, send this JSON request to the installed plugin's
+`runtime/run.py` using Python 3.10+ (resolve the plugin root on the current host):
+
+```json
+{"api_version":"1.0.0","operation":"policy.resolve","entrypoint":"qa-baseline"}
+```
+
+Use the returned policy and `references/runtime-contracts.md` for contract identifiers,
+limits and dependency floors. Unknown fields or incompatible versions block startup.
+Task envelopes use `contract_version: "1.0.0"` and `task_input`; legacy `raw_input`
+is accepted only by the explicit `input.normalize` compatibility adapter with `legacy: true`.
+This preflight validates policy; durable lifecycle and host enforcement are separate
+capabilities. Never infer those capabilities from a successful policy response.
+
+
 Build a durable QA knowledge base by inspecting the current repo and (optionally)
 external QA systems, then persisting what you learn as two guide files. Downstream,
 `qa-scoping` reads both files on every feature run — this skill is the one-time

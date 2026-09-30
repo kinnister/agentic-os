@@ -198,6 +198,24 @@ test_flow_but_no_run() {
   cleanup_tmp
 }
 
+# (3) Managed SQLite runs cannot use this legacy external-action hook without
+# a coordinator-fenced adapter path.
+test_managed_run_fails_closed() {
+  with_tmpdir
+  make_stub_adapter
+  write_flow_file "$ADAPTER_CMD" "$KNOWN_STATES" "$TRANSITIONS"
+  write_run "$TICKET"
+  mkdir -p .agentic/state
+  : > .agentic/state/runtime.sqlite3
+  emit_phase 2
+  TICKET_SYNC_TEST_RESPONSE="Transitioned to DEV"
+  export TICKET_SYNC_TEST_RESPONSE
+  assert_silent_exit "managed run fails closed"
+  assert_receipt_count "managed run fails closed" "$CANON_LEDGER" 0
+  unset TICKET_SYNC_TEST_RESPONSE
+  cleanup_tmp
+}
+
 # (3) External Ticket is "Not configured" → skipped, zero receipts.
 test_ticket_not_configured() {
   with_tmpdir
@@ -301,6 +319,7 @@ test_pending_does_not_block_retry() {
 # ---------------------------------------------------------------------------
 test_no_flow_file
 test_flow_but_no_run
+test_managed_run_fails_closed
 test_ticket_not_configured
 test_phase_completed_fires
 test_dedup_repeat_fire

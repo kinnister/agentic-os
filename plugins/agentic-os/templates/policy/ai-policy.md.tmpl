@@ -83,6 +83,13 @@ that is what test automation is for. The read-only boundary targets production.
 
 ## Enforcement layers
 
+The write-scope hook binds a managed tool event to the active assignment identity. A missing
+assignment is unmanaged operation; malformed or unreadable assignment state is a hard block.
+Read-only assignments cannot use Write, Edit, or Bash. This hook is a host boundary for the
+tools it receives, not an operating-system sandbox: direct child processes, database access, and
+external effects require a host capability declaration and must be reported as unsupported when
+the host cannot restrict them.
+
 Soft layers tell the model what not to do; hard layers fail closed and do not
 depend on the model cooperating.
 

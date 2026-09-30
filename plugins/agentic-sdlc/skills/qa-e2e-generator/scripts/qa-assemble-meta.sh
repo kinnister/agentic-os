@@ -36,6 +36,21 @@ base_dir=${1%/}
 meta_path="$base_dir/meta.json"
 dir_with_slash="$base_dir/"
 
+# A managed SQLite run owns lifecycle state. This compatibility assembler cannot
+# commit a coordinator-fenced snapshot, so refuse to create a second authority.
+# Managed callers use runtime lifecycle operations and legacy.export instead.
+probe_dir=$(cd "$base_dir" 2>/dev/null && pwd) || {
+    printf 'qa-assemble-meta: output directory is not accessible: %s\n' "$base_dir" >&2
+    exit 2
+}
+while [[ "$probe_dir" != "/" ]]; do
+    if [[ -f "$probe_dir/.agentic/state/runtime.sqlite3" ]]; then
+        printf 'qa-assemble-meta: managed SQLite run detected; use runtime operations and legacy.export\n' >&2
+        exit 2
+    fi
+    probe_dir=$(dirname "$probe_dir")
+done
+
 # Pull a string field, defaulting when the file or key is absent/unreadable.
 pick_text() {
     local file=$1 query=$2 fallback=$3

@@ -1,25 +1,39 @@
 ---
 name: gate-arbiter
 discoverable: false
-description: Invoke this skill whenever an SDLC pipeline phase reaches a judgment gate and needs a resolved, logged verdict — spec approval, plan approval, QA drift, code review (final or check round), requirements ambiguity, spec clarification, or feature verification. Trigger phrases include "resolve this gate", "route this decision", "get a verdict for <gate_id>", "who approves this", "check the escalation rule", or "record this to decisions.jsonl". It is the single entry point for every recognized gate id in both hitl and autonomous modes. Not for: the `qa.ready` signal — that stays deterministic inside the calling pipeline and never enters this router's table — gate ids outside its recognized set, or making the underlying judgment itself (it resolves and logs verdicts through the configured mode).
+description: Invoke this skill whenever an SDLC pipeline phase reaches a judgment gate and needs a resolved, logged verdict — spec approval, plan approval, QA drift, code review (final or check round), requirements ambiguity, spec clarification, or feature verification. Trigger phrases include "resolve this gate", "route this decision", "get a verdict for <gate_id>", "who approves this", "check the escalation rule", or "record this decision". It is the single entry point for every recognized gate id in both hitl and autonomous modes. Not for: the `qa.ready` signal — that stays deterministic inside the calling pipeline and never enters this router's table — gate ids outside its recognized set, or making the underlying judgment itself (it resolves and logs verdicts through the configured mode).
 ---
 
 # gate-arbiter
 
-Single shared resolver for every judgment gate in the SDLC pipeline. Given a gate id and a mode
+Coordinator-owned router for every judgment gate in the SDLC pipeline. Given a gate id and a mode
 (`hitl` or `autonomous`), it decides *how* the gate gets settled — human question, deterministic
 check, fast-path approval, or dispatched stand-in reviewer — always returns one fixed verdict
-shape, and durably records the outcome even when the normal resolution path fails.
+shape, and requires a supported authoritative commit before progression.
 
-> This skill decides and logs. It never edits a spec, plan, diff, or evidence file, and it never
+> The coordinator decides and commits through supported runtime operations; workers advise. It never edits a spec, plan, diff, or evidence file, and it never
 > runs review-lens subagents itself — those live one level down, inside `code-review-orchestrator`.
+
+## Availability and authority
+
+`runtime/agentic_runtime/registry.json` is the sole source of gate/loop identifiers and policy
+defaults. `references/runtime-contracts.md` is generated from it. The bundled runtime provides
+versioned lifecycle, decision, evidence, export, and reconciliation operations. This skill must
+commit gate decisions through the runtime operation (`decision.record`) when a runtime run exists;
+an unavailable operation blocks. Never simulate resolution by appending JSON/JSONL or claim a
+managed gate was committed.
+
+The authority is `.agentic/state/runtime.sqlite3`. `.agentic/runs/<run-id>/` holds
+regenerable exports, not the decision ledger of record. Use `legacy.export` only to refresh
+compatibility ledgers for older readers. Preserve human specs/plans under
+`docs/superpowers/`. Establish branch/worktree ownership before any run-artifact writes.
 
 ## Operating modes
 
 | Mode | Behavior |
 |---|---|
 | `hitl` | Every recognized gate goes to `AskUserQuestion`. No fast-path, deterministic shortcut, or stand-in substitutes for the human's answer. The two code-review gates are the one carve-out: run the inline `code-review-orchestrator` skill first to produce a report, then ask the human — the report informs the question, it never resolves the gate on its own. |
-| `autonomous` | Resolution tries cheapest-first: deterministic check → pre-classified fast-path → dispatched stand-in subagent. Code-review gates are pinned to the inline skill and never fall through to fast-path or stand-in dispatch. |
+| `autonomous` | Resolution tries cheapest-first: deterministic check → mandatory escalation check → eligible fast-path → advisory stand-in subagent. Code-review gates are pinned to the inline skill and never fall through to fast-path or stand-in dispatch. |
 
 An unrecognized gate id is a structural error in either mode, not a judgment call: reject
 immediately, decision `abort`, confidence `low`, escalation forced.
@@ -40,39 +54,30 @@ never abbreviate them.
 | `qa.drift` | `lead-proxy` | subagent |
 | `feature.verification` | `lead-proxy` | subagent |
 
-Three additional ids are recognized (valid for hitl's Step 1 and for the unrecognized-gate check)
+Three additional ids are recognized (valid in both modes and checked against the registry)
 but carry no resolver row: `classification.confirm`, `qa-checklist.approved`, `qa-tests.approved`.
-In autonomous mode they have no stand-in to dispatch to — they resolve only through the
-deterministic/fast-path steps upstream of dispatch.
+In autonomous mode they have no stand-in to dispatch to — they resolve through eligible deterministic/fast-path steps after mandatory escalation checks, or escalate to the user.
 
 A related but separate id, `qa.ready`, is never routed through this skill at all — see Non-goals.
 
-## Resolution steps (autonomous mode, cheapest-first)
+## Resolution order
 
-| Step | Applies in | Dispatches a subagent? | Spends a model call? | Subject to escalation rule? |
-|---|---|---|---|---|
-| 0 — code-review, inline skill | both modes | no (Skill tool, not Agent tool) | yes | yes, per its own sub-rules |
-| 1 — HITL short-circuit | hitl only | no | n/a — human is final | n/a |
-| 2 — deterministic evidence | autonomous, `feature.verification` only | no | no | no |
-| 3 — fast-path | autonomous | no | no | no |
-| 4 — stand-in dispatch | autonomous | yes | yes | yes |
-
-Order of evaluation:
-
-1. **Code-review gate?** Run Step 0 in both modes; never fast-pathed, never dispatched as a
-   stand-in, in either mode.
-2. **Mode is `hitl`?** Ask the human directly (Step 1). Skip everything below.
-3. **Mode is `autonomous`, gate is `feature.verification`?** Apply the deterministic evidence
-   sub-rules (Step 2) before considering fast-path or dispatch.
-4. **Fast-path hint present** (`context.fast_path`) and gate is not code-review? Approve without
-   dispatch (Step 3).
-5. **Otherwise, gate is dispatchable?** Send full context to the mapped stand-in via the Agent
-   tool (Step 4). Parse its stdout as JSON. Retry once on parse failure. A second parse failure
-   escalates to the human regardless of mode.
-
-Deterministic and fast-path outcomes skip the escalation rule entirely — they are either plain
-facts already verified upstream, or pre-vetted approvals; only stand-in- and orchestrator-produced
-verdicts need the escalation check.
+1. Reject unknown IDs or malformed required inputs as structural blockers. Validate required
+   evidence shape deterministically; missing evidence cannot be approved by a resolver.
+2. Evaluate mandatory escalation against effective policy and all known risk flags, including
+   `security`, `breaking-change`, `migration`, and `spend`. This check precedes **every**
+   approval path, including deterministic approvals and fast-path hints.
+3. For review gates, invoke `code-review-orchestrator` inline for an advisory report. The
+   coordinator retains gate authority; review workers cannot approve or transition the run.
+4. In `hitl`, obtain the user's judgment. A report or fast-path hint cannot substitute for it.
+   Mandatory escalation in autonomous mode also goes to the user before approval.
+5. In autonomous mode without mandatory escalation, accept a supported deterministic result
+   or eligible, evidence-grounded fast path. Presence of `context.fast_path` alone is insufficient.
+   Otherwise request the mapped resolver's advice; if none applies, ask the user.
+6. Validate advice, reevaluate escalation using newly reported risks and confidence, and then
+   have the coordinator commit the decision through the supported runtime operation. Low
+   confidence and exhausted malformed-output retries require escalation. Persistence failure
+   blocks progression; an advisory verdict is not a committed gate decision.
 
 ## `feature.verification` deterministic sub-rules (autonomous only, in order)
 
@@ -86,13 +91,12 @@ Evaluate in this order, stopping at the first match:
 3. Any evidence `result` is `INCONCLUSIVE` → `request-changes`, asking for expanded coverage.
 4. Any evidence entry is missing its `screenshot_path` artifact → `request-changes`.
 5. All `PASS`, all screenshots present, zero console/network errors, no risk flags → deterministic
-   `approve`. Stop here — do not fall through to stand-in dispatch.
-6. All `PASS` but risk flags are present → do not stop; continue to Step 4 (stand-in dispatch) for
-   confirmation.
+   `approve`. Only after mandatory escalation checks; no stand-in dispatch is needed.
+6. All `PASS` but risk flags are present → do not stop; apply mandatory escalation and otherwise seek advisory confirmation.
 
 ## Escalation rule
 
-Force any stand-in- or orchestrator-produced verdict back to a human question (`AskUserQuestion`)
+Evaluate mandatory escalation before any approval path, including deterministic and fast-path results. Force any stand-in- or orchestrator-produced advice back to a human question (`AskUserQuestion`)
 when any of the following hold:
 
 - `confidence` is `low`.
@@ -134,8 +138,7 @@ subagents) that a single dispatched stand-in cannot do. Resolve them by invoking
 previously identified findings plus their fix — it should not restart a full review unless the fix
 itself introduces new high-risk concerns.
 
-If the orchestrator produces no usable verdict, write the canonical safe-fail object in its place
-(see Persistence below) rather than leaving the gate undecided.
+If the orchestrator produces no usable verdict, return a blocking low-confidence request-changes recommendation; the coordinator records the blocked outcome only through supported runtime operations.
 
 ## Inputs
 
@@ -149,7 +152,7 @@ If the orchestrator produces no usable verdict, write the canonical safe-fail ob
 | `context.phase` | pipeline phase, carried into `events.jsonl` |
 | `context.risk_flags` | flags checked against `escalate_on` |
 | `context.memory_brief` | read from the per-role memory store |
-| `context.fast_path?.reason` | presence alone triggers Step 3 (non-code-review gates only) |
+| `context.fast_path?.reason` | advisory hint only; requires evidence and mandatory escalation checks |
 | `mode` | `hitl` \| `autonomous` |
 | `run_dir` | run-scoped directory all persisted files below are relative to; conventionally a run's directory under `.agentic/` |
 | `escalate_on` | caller-supplied risk-flag list for the escalation rule |
@@ -170,50 +173,18 @@ and on check rounds `finding_status`. Internally these are tagged `verdict.sourc
 produced autonomously by the orchestrator, or `"hitl"` when the orchestrator's report was
 human-reviewed.
 
-## Persistence
+## Retry and persistence contract
 
-Every gate resolution appends one record to the decision log and one matching event to the run
-ledger, best-effort — a write failure here must never block the pipeline.
+`arbiter.malformed.retry` has its `max_retries` and `on_cap` in the registry. Counts mean
+retries after the initial attempt. Check success before exhaustion: a valid final retry is
+usable. All reruns share the budget, including user-requested ones; extra attempts require an
+explicit recorded budget increase. Resume does not reset the budget.
 
-**`<run_dir>/decisions.jsonl`** — append-only, one line per call:
-```json
-{"ts":"<ISO>","gate_id":"<id>","mode":"<mode>","verdict":{...},"escalated":<bool>,"prior_context":{...}}
-```
-
-**`<run_dir>/events.jsonl`** — append-only, contract owned by the pipeline orchestrator, event name
-`decision.recorded`:
-```json
-{
-  "schema": 1, "ts": "<ISO>", "event": "decision.recorded", "run_id": "<id>",
-  "phase": <context.phase>, "actor": "gate-arbiter",
-  "summary": "Decision recorded for <gate_id>: <decision>",
-  "artifacts": ["decisions.jsonl"],
-  "data": {
-    "gate_id": "<id>", "mode": "<mode>", "decision": "<verdict.decision>",
-    "source": "<verdict.source>", "escalated": <bool>,
-    "prior_context": {
-      "question": "<question>", "options": ["<option>", "..."],
-      "phase": <context.phase>, "risk_flags": ["<flag>", "..."],
-      "artifact_refs": ["<path-or-ref>", "..."],
-      "fast_path": "<context.fast_path if supplied>",
-      "prior_autonomous_verdict": "<subagent/deterministic verdict if overridden>"
-    }
-  }
-}
-```
-
-**`<run_dir>/code-review-final.json`** — final-round verdict, written by the orchestrator or, on
-failure, by the safe-fail path below.
-
-**`<run_dir>/code-review-check.json`** — check-round verdict, same rule.
-
-**Canonical code-review safe-fail verdict** — written in place of a missing verdict, verbatim:
-```json
-{ "decision": "request-changes", "rationale": "<why the review could not run>", "confidence": "low",
-  "risk_flags": [], "business_review": [], "standards_review": [], "findings": [] }
-```
-Add `"finding_status": []` on the check round. No wrapper fields (`source`, `follow_ups`,
-`escalated`) belong inside this object — those live only in the `decisions.jsonl` entry.
+Once implemented, coordinator-owned runtime transactions persist the decision and matching
+state/event atomically. Metadata, `decisions.jsonl`, `events.jsonl`, `code-review-final.json`,
+and `code-review-check.json` are regenerable exports. Never use best-effort export writes as a
+substitute for authoritative persistence. An export failure after commit may be repaired; a
+failed or unavailable authoritative commit prevents progression.
 
 ## Evidence schema (validated upstream, before this skill sees it)
 
@@ -243,8 +214,7 @@ Required subset — missing any forces `request-changes`: `schema`, `task_id`, `
 
 ## Blast radius
 
-R1 — run-artifact writes only. This skill appends to `decisions.jsonl` and `events.jsonl` under
-`run_dir` and, for code-review gates, writes the verdict JSON files listed above. It never writes
+R1 — coordinator-owned runtime decision mutations only when implemented; JSON/JSONL are regenerable exports. It never writes
 repo files (R2) and never triggers external side effects (R3); it only reads upstream artifacts
 (evidence files, verification plan) and resolver output before recording a decision.
 
@@ -262,13 +232,9 @@ repo files (R2) and never triggers external side effects (R3); it only reads ups
 
 ## Cross-skill dependencies
 
-- **`sdlc-engine`** — assembles gate inputs (review bundle, ArtifactRefs, `memory_brief`), owns
-  the `events.jsonl` ledger contract, decides `qa.ready` deterministically, and surfaces
-  malformed or missing `decisions.jsonl`/`events.jsonl` entries as audit warnings (via a companion
-  `sdlc-runs` capability) rather than run failures.
-- **`code-review-orchestrator`** — the skill invoked inline at Step 0; runs three parallel
-  review-lens subagents itself, adjudicates standards/security, triages, and persists the verdict
-  file.
+- **`sdlc-engine`** — assembles gate inputs (review bundle, ArtifactRefs, `memory_brief`), owns runtime coordination, decides `qa.ready` deterministically, and blocks on failed authoritative persistence. Export warnings do not invalidate committed state.
+- **`code-review-orchestrator`** — the skill invoked inline at the review step; runs bounded parallel
+  review-lens subagents itself, reports standards/security findings and advisory verdicts. The coordinator owns final resolution.
 - **Stand-in resolvers** — `story-proxy` (requirements/clarification gates), `lead-proxy`
   (spec/plan/drift/verification gates).
 - **Memory** — reads `memory_brief` from the per-role memory store under `.agents/memory/sdlc/`.

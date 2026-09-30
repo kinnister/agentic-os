@@ -17,6 +17,27 @@ allowed-tools: Read, Write, Bash, Glob, Grep, Agent, AskUserQuestion, TaskCreate
 
 # qa-e2e-generator
 
+## Shared contract preflight
+
+Before workflow actions, send this JSON request to the installed plugin's
+`runtime/run.py` using Python 3.10+ (resolve the plugin root on the current host):
+
+```json
+{"api_version":"1.0.0","operation":"policy.resolve","entrypoint":"qa-e2e-generator"}
+```
+
+Use the returned policy and `references/runtime-contracts.md` for contract identifiers,
+limits and dependency floors. Unknown fields or incompatible versions block startup.
+Task envelopes use `contract_version: "1.0.0"` and `task_input`; legacy `raw_input`
+is accepted only by the explicit `input.normalize` compatibility adapter with `legacy: true`.
+This preflight validates policy; durable lifecycle and host enforcement are separate
+capabilities. Never infer those capabilities from a successful policy response.
+
+For a managed run, follow [`references/runtime-authority.md`](../../references/runtime-authority.md):
+record phase decisions and execution evidence through runtime operations and use
+`legacy.export` for compatibility ledgers. Direct JSONL appends never advance a run.
+
+
 Orchestrator skill. One ticket id in, executable E2E automation out. You run an
 11-phase pipeline that alternates inline shell steps with seven isolated
 subagent dispatches, each returning a **structured verdict** and writing its
@@ -147,6 +168,9 @@ For each file-backed subagent phase:
    into `$RUN_DIR/e2e/`, and returns a structured verdict (never prose).
 4. Append the event:
    `${CLAUDE_PLUGIN_ROOT}/skills/qa-e2e-generator/scripts/qa-append-event.sh "$RUN_DIR/e2e" <phase-number> <name> complete`
+   For a managed SQLite run, the helper requires the coordinator run ID, lease
+   epoch, and expected revision environment and records `event.record`; missing
+   context fails closed. Refresh compatibility views with `legacy.export`.
 
 Phase 4 skips step 1 and dispatches the `sizing-analyst` agent type
 directly. Model-tier guidance: mechanical passes (AC check, MR compose) run
@@ -277,6 +301,9 @@ The external side-effect. Only after finalization:
 
 1. Roll up metadata:
    `${CLAUDE_PLUGIN_ROOT}/skills/qa-e2e-generator/scripts/qa-assemble-meta.sh "$RUN_DIR/e2e"`
+   This compatibility assembler remains for unmanaged fixtures; managed runs
+   must use the runtime lifecycle operation and `legacy.export` to regenerate
+   metadata.
 2. Dispatch `mr`, which composes and opens the merge request through the
    adapter (handing off to the `mr-submit` skill — no source-control platform
    hardcoded).

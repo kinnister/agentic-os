@@ -157,6 +157,12 @@ EOF
 RUN_DIR=$(dirname "$newest_meta")
 META_CONTENT=$(cat "$newest_meta" 2>/dev/null)
 
+# A managed run's external intent and receipt must be fenced and reconciled by
+# the runtime. Remember this mode and route it through the coordinator-backed
+# helper below; never append a compatibility receipt in managed mode.
+managed_runtime=0
+[ -f ".agentic/state/runtime.sqlite3" ] && managed_runtime=1
+
 run_id=$(json_str_field "$META_CONTENT" "run_id")
 [ -n "$run_id" ] || run_id="unknown"
 
@@ -310,6 +316,31 @@ esc_msg=$(printf '%s' "$action_msg" \
 
 final_cmd=$(printf '%s' "$adapter_cmd" \
   | awk -v m="$esc_msg" '{gsub(/\{message\}/, m); print}')
+
+if [ "$managed_runtime" -eq 1 ]; then
+  # The coordinator supplies the lease and expected revision. Without those
+  # values this legacy async hook cannot safely mutate external state.
+  [ -n "${AGENTIC_COORDINATOR_ID:-}" ] || bail
+  [ -n "${AGENTIC_LEASE_EPOCH:-}" ] || bail
+  [ -n "${AGENTIC_EXPECTED_REVISION:-}" ] || bail
+  plugin_root="${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-plugins/agentic-sdlc}}"
+  helper="$plugin_root/scripts/external-action.py"
+  [ -f "$helper" ] || bail
+  esc_id=$(json_escape "$work_item_id")
+  esc_state=$(json_escape "$target_state")
+  request_json="{\"work_item_id\":\"$esc_id\",\"state\":\"$esc_state\"}"
+  AGENTIC_EXTERNAL_ROOT="$PWD" \
+  AGENTIC_EXTERNAL_RUN_ID="$run_id" \
+  AGENTIC_EXTERNAL_KEY="ticket-sync:$run_id:$work_item_id:$target_state" \
+  AGENTIC_EXTERNAL_ACTION="ticket-sync.$target_state" \
+  AGENTIC_EXTERNAL_REQUEST="$request_json" \
+  AGENTIC_COORDINATOR_ID="$AGENTIC_COORDINATOR_ID" \
+  AGENTIC_LEASE_EPOCH="$AGENTIC_LEASE_EPOCH" \
+  AGENTIC_EXPECTED_REVISION="$AGENTIC_EXPECTED_REVISION" \
+  AGENTIC_EXTERNAL_ADAPTER="$final_cmd" \
+  python3 "$helper" --env >/dev/null 2>&1 || true
+  exit 0
+fi
 
 # ---------------------------------------------------------------------------
 # 11. Run the adapter under a 120s timeout; swallow all failures.

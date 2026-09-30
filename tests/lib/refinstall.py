@@ -21,6 +21,7 @@ import hashlib
 import json
 import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -484,23 +485,56 @@ JOURNAL = {"agentic_os_version": VERSION, "answers": {"presets": PRESET_NAMES,
 MANAGED_APPEND = {"CLAUDE.md", ".claude/settings.json"}
 
 
+# Every scaffold file is staged here and applied at the end through the shipped
+# runtime's `install.apply` (SKILL.md Phase 4), which owns collision handling:
+# a pre-existing or user-modified file is preserved and journaled user-owned.
+# Later steps read staged content back through `current()`.
+PENDING: dict[str, dict] = {}
+
+
+def current(rel: str) -> str | None:
+    if rel in PENDING:
+        return PENDING[rel]["content"]
+    path = TARGET / rel
+    return path.read_text() if path.is_file() else None
+
+
+def exists_after(rel: str) -> bool:
+    return rel in PENDING or (TARGET / rel).exists()
+
+
 def write(dest_rel: str, content: str, template: str, owner: str = "managed"):
-    dest = TARGET / dest_rel
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    if REINSTALL and dest.exists():
-        cur = hashlib.sha256(dest.read_bytes()).hexdigest()
-        rec = JOURNAL_PREV.get("files", {}).get(dest_rel)
-        if rec and rec["sha256"] != cur:      # user-modified: skip + warn
-            print("WARN skip user-modified", dest_rel, file=sys.stderr)
-            JOURNAL["files"][dest_rel] = rec
-            return
-    elif not REINSTALL and dest.exists() and dest_rel not in MANAGED_APPEND:
-        # Fresh install, pre-existing non-journaled file: collision default = skip.
-        print("COLLISION skip (owner user)", dest_rel, file=sys.stderr)
-        JOURNAL["files"][dest_rel] = {"sha256": sha(dest), "template": template, "owner": "user"}
-        return
-    dest.write_text(content)
-    JOURNAL["files"][dest_rel] = {"sha256": sha(dest), "template": template, "owner": owner}
+    PENDING[dest_rel] = {"content": content, "template": template, "owner": owner}
+
+
+def merge_into_existing(dest_rel: str, content: str, template: str):
+    """Stage content that merges into a file the user may already own.
+
+    A pre-existing file (or one the journal does not record as ours) is
+    replaced only under a compare-and-swap confirmation of its current bytes;
+    it stays user-owned. A managed file is replaced normally.
+    """
+    spec = {"content": content, "template": template}
+    path = TARGET / dest_rel
+    previous = JOURNAL_PREV.get("files", {}).get(dest_rel, {})
+    if path.is_file() and (previous.get("owner") != "managed" or previous.get("sha256") != sha(path)):
+        # Pre-existing, user-owned, or a managed file the user edited: merge
+        # under a confirmation of the current bytes; it lands user-owned.
+        spec["expect_sha256"] = sha(path)
+    else:
+        spec["owner"] = "managed"
+    PENDING[dest_rel] = spec
+
+
+def runtime(operation: str, **fields) -> dict:
+    """Call the plugin's own versioned runtime, exactly as the skill does."""
+    request = {"api_version": "1.0.0", "operation": operation, **fields}
+    result = subprocess.run([sys.executable, str(PLUGIN / "runtime/run.py")],
+                            input=json.dumps(request), text=True, capture_output=True)
+    response = json.loads(result.stdout or "{}")
+    if result.returncode != 0 or not response.get("ok"):
+        raise SystemExit("refinstall: %s failed: %s" % (operation, response.get("error") or result.stderr))
+    return response["result"]
 
 
 def copy_tpl(src_rel: str, dest_rel: str, template: str):
@@ -511,7 +545,7 @@ def copy_tpl(src_rel: str, dest_rel: str, template: str):
 
 JOURNAL_PREV = {}
 jpath = TARGET / ".agentic/agentic-os/install.json"
-if REINSTALL and jpath.exists():
+if jpath.exists():
     JOURNAL_PREV = json.loads(jpath.read_text())
 
 # --- Phase 4 step 1: hooks -----------------------------------------------------
@@ -577,8 +611,8 @@ def prune_missing_hook_commands(node):
                 if not (".claude/hooks/" in hook.get("command", "")
                         and hook["command"].split(".claude/hooks/", 1)[1].split()[0]
                         in AGENTIC_HOOK_NAMES
-                        and not (TARGET / (".claude/" + hook["command"].split(
-                            ".claude/", 1)[1].split()[0])).exists())
+                        and not exists_after(".claude/" + hook["command"].split(
+                            ".claude/", 1)[1].split()[0]))
             ]
             return
         for key in list(node):
@@ -593,8 +627,8 @@ def prune_missing_hook_commands(node):
                             if not (".claude/hooks/" in hook.get("command", "")
                                     and hook["command"].split(".claude/hooks/", 1)[1].split()[0]
                                     in AGENTIC_HOOK_NAMES
-                                    and not (TARGET / (".claude/" + hook["command"].split(
-                                        ".claude/", 1)[1].split()[0])).exists())
+                                    and not exists_after(".claude/" + hook["command"].split(
+                                        ".claude/", 1)[1].split()[0]))
                         ]
                         if group["hooks"]:
                             kept_groups.append(group)
@@ -612,10 +646,8 @@ def prune_missing_hook_commands(node):
 
 
 prune_missing_hook_commands(settings)
-settings_path.parent.mkdir(parents=True, exist_ok=True)
-settings_path.write_text(json.dumps(settings, indent=2) + "\n")
-JOURNAL["files"][".claude/settings.json"] = {
-    "sha256": sha(settings_path), "template": "hooks/settings-fragment", "owner": "managed"}
+merge_into_existing(".claude/settings.json", json.dumps(settings, indent=2) + "\n",
+                    "hooks/settings-fragment")
 
 # --- Phase 4 step 3: git hooks (chaining installer) ---------------------------
 if "githooks/pre-commit" in PRESET_TEMPLATE_IDS:
@@ -644,11 +676,10 @@ if claude_path.exists():
     body = claude_path.read_text()
     body = re.sub(re.escape(BEGIN) + r".*?" + re.escape(END), "", body, flags=re.S).rstrip()
     # Idempotent: a block-only file (no surrounding content) re-renders identically.
-    claude_path.write_text((body + "\n\n" if body else "") + claude_block + "\n")
+    merge_into_existing("CLAUDE.md", (body + "\n\n" if body else "") + claude_block + "\n",
+                        "governance/claude-section")
 else:
-    claude_path.write_text(claude_block + "\n")
-JOURNAL["files"]["CLAUDE.md"] = {"sha256": sha(claude_path),
-                                 "template": "governance/claude-section", "owner": "managed"}
+    merge_into_existing("CLAUDE.md", claude_block + "\n", "governance/claude-section")
 
 copy_tpl("governance/AGENTS.md.tmpl", "AGENTS.md", "governance/agents")
 copy_tpl("governance/PATTERNS.md.tmpl", "PATTERNS.md", "governance/patterns")
@@ -658,10 +689,10 @@ copy_tpl("governance/agent-registry.md.tmpl", ".agentic/guides/agent-registry.md
 # The registry template is shared, but only selected role-owned rows may remain.
 # This is reconciliation within the existing canonical matrix, not a second
 # registry. Preserve the generated-agent marker and explanatory prose.
-registry_path = TARGET / ".agentic/guides/agent-registry.md"
-if registry_path.exists():
+registry_rel = ".agentic/guides/agent-registry.md"
+if registry_rel in PENDING:
     registry_lines = []
-    for line in registry_path.read_text().splitlines(True):
+    for line in current(registry_rel).splitlines(True):
         # Only remove orchestration matrix rows. Prose may mention an
         # unselected asset while still describing the shared architecture.
         if not line.lstrip().startswith("|"):
@@ -689,8 +720,7 @@ if registry_path.exists():
         if missing_selected_asset:
             continue
         registry_lines.append(line)
-    registry_path.write_text("".join(registry_lines))
-    JOURNAL["files"][".agentic/guides/agent-registry.md"]["sha256"] = sha(registry_path)
+    PENDING[registry_rel]["content"] = "".join(registry_lines)
 
 # --- Phase 4 step 5: policies, guides, sdlc -----------------------------------
 for name in ("ai-policy", "escalation-policy", "safety-policy"):
@@ -721,20 +751,18 @@ for g, tid in GUIDE_IDS.items():
     src = "guides/standards/%s.md" % g
     if not (TPL / src).exists():
         src += ".tmpl"
-    if (TARGET / dest).exists():  # existing-guide rule: skip + owner user
-        JOURNAL["files"][dest] = {"sha256": sha(TARGET / dest), "template": "guides/" + g,
-                                  "owner": "user"}
-    else:
-        copy_tpl(src, dest, "guides/" + g)
+    # Existing-guide rule (skip + owner user) is the installer's preserve
+    # decision for any pre-existing file; no special case is needed here.
+    copy_tpl(src, dest, "guides/" + g)
 copy_tpl("sdlc/config.json.tmpl", ".agentic/agentic-sdlc/config.json", "sdlc/config")
 copy_tpl("sdlc/project.md.tmpl", ".agentic/guides/project.md", "sdlc/project")
 
 # MCP setup is a guide in the same canonical standards directory, not a second
 # onboarding layer. Keep its state visible in the generated project context so
 # the readiness summary can distinguish connected, deferred, and unavailable.
-project_path = TARGET / ".agentic/guides/project.md"
-if project_path.exists():
-    project_body = project_path.read_text()
+project_rel = ".agentic/guides/project.md"
+if project_rel in PENDING:
+    project_body = current(project_rel)
     project_body += "\n\n## MCP readiness\n\n"
     project_body += {
         "without-mcp": "MCP status: without MCP. Continue with pasted tables, CSV extracts, screenshots, or Power BI findings.",
@@ -752,8 +780,7 @@ if project_path.exists():
                          "- Turn this Power BI insight into a customer-ready requirement.\n"
                          "- Convert this Excel analysis into acceptance criteria.\n"
                          "- Prepare clarification questions for the customer and delivery team.\n")
-    project_path.write_text(project_body + "\n")
-    JOURNAL["files"][".agentic/guides/project.md"]["sha256"] = sha(project_path)
+    PENDING[project_rel]["content"] = project_body + "\n"
 
 # --- Phase 4 step 7: core agents + pointers -----------------------------------
 CORE_AGENTS = [("dispatcher", True), ("blind-code-reviewer", False),
@@ -787,6 +814,15 @@ for command in ("pipeline-orchestrator", "dispatch"):
     if tid in PRESET_TEMPLATE_IDS:
         copy_tpl("commands/core/%s.md.tmpl" % command, ".claude/commands/%s.md" % command, tid)
 
+# --- Phase 4 step 4 (apply): one journaled, compare-and-swap installer pass ----
+# Answers first, so an interrupted run still leaves an uninstallable journal.
+runtime("install.record", target=str(TARGET),
+        fields={"answers": JOURNAL["answers"], "phase": "scaffold",
+                "follow_ups": JOURNAL_PREV.get("follow_ups", [])})
+runtime("install.apply", target=str(TARGET), agentic_os_version=VERSION,
+        files=dict(sorted(PENDING.items())))
+JOURNAL = json.loads(jpath.read_text())
+
 # --- Phase 4 step 8: seed instruction scorecard -------------------------------
 scorecard = {"schema": 1, "threshold": 95, "files": {}}
 for rel in list(JOURNAL["files"]):
@@ -804,7 +840,4 @@ sc_path.write_text(json.dumps(scorecard, indent=2) + "\n")
 
 # --- flaky ledger only for qa preset (not developer) --------------------------
 
-jpath.parent.mkdir(parents=True, exist_ok=True)
-JOURNAL["phase"] = "scaffold"
-jpath.write_text(json.dumps(JOURNAL, indent=2) + "\n")
-print("refinstall: wrote %d files to %s" % (len(JOURNAL["files"]), TARGET))
+print("refinstall: journaled %d files in %s" % (len(JOURNAL["files"]), TARGET))

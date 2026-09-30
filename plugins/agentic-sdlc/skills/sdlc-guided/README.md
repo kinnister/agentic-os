@@ -37,5 +37,5 @@ run directory and its artifacts, beginning at Phase 0.
 - A repo-guides baseline under `.agentic/guides/` — at minimum `project.md`,
   `git-workflow.md` and `quality-gates.md`. Run `repo-guides` first if it is
   missing; the pipeline will halt and tell you so anyway.
-- The superpowers plugin, 5.0.7 or newer.
+- The superpowers plugin, 6.1.0 or newer.
 - Either a feature branch to work on, or a base branch to cut one from.

@@ -52,6 +52,9 @@ itself as a hook in `plugin.json`, so nothing exports by default.
    `meta.json` under `docs/superpowers/runs/` (maxdepth 2), matching
    `ticket-sync`'s discovery exactly so the two adapters never disagree about
    "the current run."
+   If the run is managed by `.agentic/state/runtime.sqlite3`, invoke
+   `legacy.export` before reading the compatibility files. If that operation is
+   unavailable, block rather than exporting a stale view.
 3. **Run the projector:**
    ```
    python3 "${CLAUDE_PLUGIN_ROOT}/scripts/export-run-telemetry.py" \
@@ -65,7 +68,9 @@ itself as a hook in `plugin.json`, so nothing exports by default.
 5. **Invoke the declared exporter**, piping the NDJSON batch to its stdin,
    under a timeout (120s, matching `ticket-sync`). Never let a nonzero exit or
    a hang block turn-end.
-6. **Append the outcome** to the run's `events.jsonl`:
+6. **Record the outcome** through the runtime event/evidence operation for a
+   managed run, then refresh compatibility files with `legacy.export`. For an
+   unmanaged legacy run, append the outcome to `events.jsonl`:
    - success → `telemetry.export_receipt`, `data` = the `CURSOR` object plus
      `{"line_count": <lines sent>}`.
    - failure/timeout → `telemetry.export_warning`, `data` =

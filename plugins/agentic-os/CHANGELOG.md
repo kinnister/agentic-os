@@ -7,7 +7,100 @@ Semantic Versioning. The plugin version lives in
 
 ## [Unreleased]
 
+### Runtime and installer reliability
+
+- agentic-upgrade explains how to refresh an existing `.ao-new` merge file
+  (a confirmation of its current bytes).
+
+- agentic-init re-runs refresh only unmodified managed files; user-owned files
+  are never refreshed silently.
+
+- When uninstall keeps a file, its journal entry now records the bytes and
+  identity actually on disk (a kept generated file keeps its recorded hash, so
+  the user's edit stays detectable).
+
+- Preserve pre-existing settings and identical user files during setup and
+  uninstall, including after a detected user edit. Validate versions and the
+  settings journal before writing; reject unsafe journal entries and anchor
+  file mutations to directory handles against symlink path swaps. Recheck the
+  planned file hash and inode before replacement or deletion; journal each file
+  before advancing, and detect journal edits at the recheck before replacement.
+  Same-byte file replacements with a new inode become user-owned; legacy
+  journal entries without file identity are preserved conservatively.
+  Detected directory replacement during an operation is rejected, and conditional
+  rollback preserves the original inode so a retry can still recognize a
+  managed file.
+  Record nanosecond modification time as well as device and inode, preventing
+  an immediately reused inode from claiming a recreated user file.
+  Generic uninstall now preserves generated files for an individual decision,
+  matching the role-removal contract instead of deleting them automatically.
+
+- Setup, upgrade and uninstall now make journal and scaffold-file writes
+  through the shared runtime (`install.apply`, `install.record`,
+  `install.remove`, `install.merge-settings`) instead of editing `install.json`
+  or scaffold files directly; `.gitignore` lines, the instruction scorecard and
+  git hooks remain direct writes. Uninstall removes only wiring for hook
+  scripts agentic-os installed, and un-wires (rather than deletes) an adopted
+  settings file under `--all`; settings are always removed or un-wired before
+  any hook script they wire. Merges into a user's existing `CLAUDE.md` or settings, and
+  confirmed deletions, are compare-and-swap confirmations of the bytes shown.
+  The reference install/uninstall executors run the same operations, so the
+  acceptance matrix now exercises the shipped installer end to end.
+
+- Add installer operations for operator decisions so setup, upgrade and
+  uninstall can stop editing files and the journal directly: compare-and-swap
+  confirmations on apply (`expect_sha256`) and remove (`confirm`) that act only
+  while the reviewed bytes are present and never raise a file's ownership;
+  files that existed before agentic-os are never deleted, even when confirmed.
+  Journal entries for managed files already deleted are dropped, unknown
+  file-spec fields are rejected, and `install.record` records answers and
+  progress. A journal containing NaN or Infinity is refused. New files follow
+  the umask, replacements keep their mode without setuid/setgid, and the
+  journal is rewritten owner-only.
+
+- Check all modern stored evidence claims before filtering required checks, so
+  a damaged database row cannot hide a signed failed check by changing its
+  required flag. Worker isolation from coordinator state remains a separate
+  host boundary.
+
+- Retain signed failed required checks and require the latest result of every
+  required command stream in the completion gate; signed receipts now bind
+  command identity and required status so a failed check cannot be hidden by
+  citing an unrelated passing check. Completion revalidates persisted signed
+  claims, so older receipts without those fields require a fresh check.
+
+- Validate `run.start` input, coordinator identity, and the exact Git worktree
+  root before the CLI creates SQLite state, so rejected starts do not leave a
+  pending run or a new `.agentic` directory.
+
+- Treat the shared lifecycle and messaging runtime as experimental; host identity,
+  trusted completion gates, installer integration, and live certification remain
+  incomplete. Unsupported completion and mailbox access fail closed during the
+  bounded remediation of the lifecycle and communication stages.
+
 ### Added
+
+- Added a structured host control matrix to preflight output, identifying which
+  controls are enforced by the runtime, checked before integration, delegated
+  to an adapter, or unsupported at the host boundary.
+
+- Added the versioned `install.merge-settings` operation for atomic,
+  journaled recursive settings merges that preserve user scalar values.
+
+- Added revision-bound command evidence receipts; failed required checks cannot
+  be recorded as successful verification.
+
+- Added durable assignment ownership and typed peer-message envelopes with
+  correlation, stale-revision, duplicate, sender, and payload-limit checks.
+
+- Added the shared SQLite lifecycle runtime with fenced revisions, durable dispatch reservations,
+  external-action reconciliation, and revision-labelled exports.
+
+- Hardened managed worker enforcement: quoted frontmatter globs are parsed, malformed assignment
+  state fails closed, and read-only assignments cannot invoke shell mutation through the scoped
+  host hook. The policy documents the host boundary and its sandbox limitation.
+
+- Bundle the canonical versioned runtime contracts for independent installation, with deterministic drift checks and strict policy/input validation.
 
 - **`devops` preset picks up the `agentic-sdlc` `telemetry-export` skill.**
   `agentic-sdlc` 0.7.0 adds an observability-adapter contract that exports a

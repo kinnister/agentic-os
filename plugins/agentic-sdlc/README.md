@@ -16,7 +16,7 @@ ordering is the core design bet of this plugin.
 
 ## Before you install
 
-- **`superpowers` ≥ 5.0.7 is a hard prerequisite.** The pipeline borrows its brainstorming,
+- **`superpowers` ≥ 6.1.0 is a hard prerequisite.** The pipeline borrows its brainstorming,
   plan-writing, subagent-driven-development, and TDD sub-skills directly rather than
   reimplementing them. First run halts immediately with an install hint if the version
   requirement isn't met.
@@ -326,7 +326,7 @@ Run/task-dir files worth knowing by name: `meta.json`, `requirements.md`, `compl
 
 ## Depends on
 
-- `superpowers` (≥ 5.0.7) — brainstorming, plan-writing, subagent-driven-development, and TDD
+- `superpowers` (≥ 6.1.0) — brainstorming, plan-writing, subagent-driven-development, and TDD
   sub-skills are borrowed directly, not reimplemented.
 - `repo-guides` — must run before this plugin's first phase.
 - `story-author` — for turning a raw idea into a story before it ever reaches this pipeline.

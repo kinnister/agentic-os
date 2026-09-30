@@ -32,6 +32,14 @@ jobs:
       - name: Acceptance matrix (T1–T8)
         run: bash tests/run-matrix.sh
 
+      - name: Frozen evaluation definitions and offline reliability checks
+        run: python3 -m unittest discover -s tests/reliability -p 'test_*.py'
+
+      - name: Canonical runtime contracts and bundle parity
+        run: |
+          python3 -m unittest discover -s tests/runtime -p 'test_*.py'
+          python3 runtime/generate_bundles.py --check
+
       # Six suites below exist, pass, and were invoked by no automation at
       # all until now. Not hypothetical: validate-presets.sh has a prior
       # recorded incident (CHANGELOG.md) where it silently failed on all

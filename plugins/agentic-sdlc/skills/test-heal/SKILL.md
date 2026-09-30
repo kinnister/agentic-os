@@ -24,6 +24,11 @@ own work can mask its own failures.
 > the blueprint wins and this file is what gets corrected — one source of truth,
 > so two agents cannot follow two different sets of practices.
 
+For a managed run, use the runtime dispatch, budget, transition, and evidence
+operations from `../../references/runtime-authority.md`. A repair report or
+JSONL append cannot reset attempts or advance the run; use `legacy.export` for
+compatibility ledgers.
+
 ## Inputs
 
 - `run_dir` — the active run directory

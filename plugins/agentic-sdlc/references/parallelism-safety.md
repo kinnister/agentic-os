@@ -19,7 +19,7 @@ outright, before you spend effort reasoning about safety.
 
 | Order | Check | Source | Effect |
 |-------|-------|--------|--------|
-| 1 | Concurrency ceiling for the work classification | `references/phase-routing.md` | Caps worker count; `1` means serialize, full stop |
+| 1 | Concurrency ceiling for the work classification | `runtime/agentic_runtime/registry.json` | Caps worker count; `1` means serialize, full stop |
 | 2 | Safe-parallelism preconditions | this document + `plan.md` | Gate the fan-out only when the ceiling already allows more than one worker |
 
 > The ceiling is a hard maximum, never a quota to fill. A ceiling of 3 does not mean spawn
@@ -27,17 +27,18 @@ outright, before you spend effort reasoning about safety.
 
 ## Concurrency ceilings
 
-Authoritative values live in `references/phase-routing.md`; mirrored here for convenience.
+Authoritative defaults live only in `runtime/agentic_runtime/registry.json`; see generated
+`references/runtime-contracts.md`. Mirrored here for convenience.
 
 | Classification | Max concurrent workers |
 |----------------|------------------------|
 | hotfix | 1 |
 | bug | 2 |
 | spike | 1 |
-| story | governed by the safety preconditions below plus the task waves declared in `plan.md` |
+| story | 3, further restricted by safety and `plan.md` task waves |
 | epic children | run sequentially — one child at a time |
 
-> Epic children are parallel-safe by construction, yet they are deliberately serialized.
+> Separate run directories alone do not make epic children parallel-safe. They are serialized.
 > Running them one after another keeps token cost and review load bounded rather than letting
 > a wide fan-out flood the reviewer.
 
@@ -70,14 +71,24 @@ Match the isolation mechanism to what each worker writes.
 
 | Blast radius | What it covers | Isolation rule |
 |--------------|----------------|----------------|
-| R0 (read-only) | Exploration, inspection, questions | Fan out freely; concurrent reads need no coordination |
-| R1 (run-artifact writes) | Appends to `decisions.jsonl` and `events.jsonl` under `.agentic/` | Serialize the appends — one writer at a time keeps the ledgers ordered and uncorrupted |
+| R0 (read-only) | Exploration, inspection, questions | Concurrent reads remain subject to worker and dispatch budgets |
+| R1 (run-artifact writes) | Runtime decisions and state | Coordinator-owned runtime transactions only; workers return advisory reports |
 | R2 (repo file writes) | Source and doc edits under the working tree | Give each mutating worker its own git worktree so edits never collide mid-flight |
 | R3 (external side-effects) | Anything reaching outside the repo | Always behind a judgment gate; never fanned out speculatively |
 
 > Read-only fan-out is the cheapest and safest form of parallelism — lean on it. Mutation is
 > where isolation matters: separate worktrees keep parallel writers from stepping on one
-> another, and serialized ledger appends keep the audit trail coherent.
+> another, and coordinator-owned runtime transactions keep the audit trail coherent.
+
+Establish branch/worktree ownership before any run-artifact write. Every mutating worker
+requires its own isolated worktree, even when file ownership is disjoint. SQLite provides
+state consistency, not a checkout sandbox. The intended database authority is
+`.agentic/state/runtime.sqlite3`; `.agentic/runs/<run-id>/` contains regenerable exports.
+The bundled runtime implements contract commands only: unavailable lifecycle or dispatch operations block,
+with no direct JSON/JSONL fallback. Preserve human specs/plans under `docs/superpowers/`.
+
+Only the coordinator dispatches workers, transitions state, resolves gates, and asks the user.
+Reviewers and resolver workers return advice; they cannot approve their own outputs.
 
 ## Worker briefing contract
 
@@ -110,7 +121,7 @@ One rule keeps concurrent results from corrupting each other:
 ## Related files
 
 - `plan.md` — declares the shared contracts and task waves that gate story-level parallelism.
-- `references/phase-routing.md` — the authoritative per-classification worker-ceiling table.
+- `references/phase-routing.md` — an explanatory classification-routing table.
 - `superpowers:subagent-driven-development` — origin of independent, parallelizable
   implementation tasks.
 - `repo-guides` — per-module parallel guide generation.

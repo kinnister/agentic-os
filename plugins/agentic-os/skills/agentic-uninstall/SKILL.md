@@ -5,6 +5,24 @@ version: 0.1.0
 license: Apache-2.0
 ---
 
+## Shared contract preflight
+
+Before workflow actions, send this JSON request to the installed plugin's
+`runtime/run.py` using Python 3.10+ (resolve the plugin root on the current host):
+
+```json
+{"api_version":"1.0.0","operation":"policy.resolve","entrypoint":"agentic-uninstall"}
+```
+
+Use the returned policy and `references/runtime-contracts.md` for contract identifiers,
+limits and dependency floors. Unknown fields or incompatible versions block startup.
+Task envelopes use `contract_version: "1.0.0"` and `task_input`; legacy `raw_input`
+is accepted only by the explicit `input.normalize` compatibility adapter with `legacy: true`.
+This preflight validates policy; durable lifecycle and host enforcement are separate
+capabilities. Never infer those capabilities from a successful policy response.
+
+
+
 # agentic-uninstall — role remover
 
 You remove roles from a repo's scaffolded layer. **This is not a deleter.**
@@ -86,7 +104,7 @@ Each entry in `journal.files` lands in exactly one bucket. Evaluate in order;
 
 | Bucket | Predicate | Action |
 |---|---|---|
-| **B0 never-touch** | `owner == "user"` or `origin == "adopted-existing"` | Report only. Never deleted, never re-rendered. Not offered as a choice. |
+| **B0 never-touch** | `owner == "user"` or `origin == "adopted-existing"`, except the merge targets `.claude/settings.json` and `CLAUDE.md` (Execution order steps 1 and 3) | Report only. Never deleted, never re-rendered. Not offered as a choice. |
 | **B1 retained-stable** | `template ∈ U_new`; render unchanged; disk matches `sha256` | No-op. |
 | **B2 retained-rerender** | `template ∈ U_new`; render changed; disk matches `sha256` | Overwrite with the new render, re-journal `sha256`, re-stamp the scorecard. Automatic — same warrant as upgrade's `CURRENT == RECORDED` branch. |
 | **B3 retained-conflict** | `template ∈ U_new`; disk differs from `sha256`; render changed | AskUserQuestion triple: **keep mine (default)** → `owner` flips to `"user"`; **take new** → overwrite, stays `managed`; **merge by hand** → write the new render to `<path>.ao-new`, journal a follow-up, leave the live file alone. |
@@ -190,14 +208,50 @@ the settings diff, the git-hook actions — and writes nothing. For an operation
 whose worst failure modes are "blocks all tool use" and "blocks all commits",
 run it first when unsure.
 
-Execution order:
-1. `.claude/settings.json` un-merge (un-wire).
-2. Delete B4 files and confirmed B5/B6 files; drop their journal and scorecard
-   entries.
-3. Re-render B2 and the Phase-3 hybrids; re-stamp journal and scorecard.
+Execution order (each step is a runtime request, never a direct file or
+journal edit — see init's "How journal and file writes happen"):
+1. `.claude/settings.json` un-merge (un-wire): `install.apply` of the
+   subtracted settings with `expect_sha256` of the bytes shown in the diff,
+   plus `owner: "managed"` only when the journal records it managed **and**
+   its current sha256 equals the recorded one; an edited file gets no owner
+   and lands user-owned, so the user's edits are never relabelled as ours
+   (a managed file can later be deleted without confirmation). Remove only
+   wiring for hook scripts agentic-os installed (managed or generated
+   entries). Under `--all`, an unedited managed settings file is deleted
+   whole in its own `install.remove` call **before** any script — and if that
+   result does not list it in `removed`, un-wire it (as below, against the
+   journal as it now stands) before deleting any script; an edited one is
+   deleted only on an explicit decision (with `confirm`), otherwise un-wired
+   and kept; a user-owned one is un-wired, not deleted — except a settings
+   file agentic-os wrote that an earlier run kept, which step 2 may remove
+   under an exact-byte confirmation when the human agrees. Pass the journaled
+   `template` when re-applying settings.
+2. Delete B4 files and confirmed B5/B6 files. **Any** settings deletion
+   (unedited managed, edited with `confirm`, or a previously kept file) is its
+   own `install.remove` call made first; if its result does not list the
+   settings file in `removed`, un-wire it (step 1) before continuing. Then one
+   `install.remove` for the rest, with `paths` and, for each confirmed B5/B6 file, `confirm: {path: sha256 of the
+   bytes the human approved}`. Kept B5/B6 files go in `paths` without a
+   confirmation; the installer preserves them, recording a modified managed
+   file user-owned and leaving a generated file `generated`.
+   Drop their scorecard entries. A journaled file agentic-os wrote that an
+   earlier run kept (user-owned but not `adopted-existing`) is outside B0 for
+   this purpose: it may be removed with the same exact-byte `confirm` when the
+   human agrees.
+3. Re-render B2 and the Phase-3 hybrids with `install.apply`, using init's
+   merge rule for user-owned merge targets (`CLAUDE.md`: refresh or, under
+   `--all`, strip only the agentic-os block, with `expect_sha256`); a B3
+   **take new** sends `expect_sha256` of the edited bytes and the owner the
+   journal records, **keep mine** sends no confirmation. Re-stamp the
+   scorecard. After every request, check the result: paths listed in
+   `preserved` or `unapplied_confirmations` were **not** changed (the file
+   differed from what the journal or the human saw); report them instead of
+   assuming success.
 4. Git hooks (below).
-5. Write the journal: updated `files`, `answers.presets = P_new`, the Phase-1
-   answers, and any `follow_ups` this run added.
+5. `install.record` the full `answers` object (the journaled answers with
+   `presets = P_new` and the Phase-1 answers; `install.record` replaces the
+   whole field) and any `follow_ups` this run added; the file entries were already
+   updated by steps 1–3.
 6. Re-run `agentic-doctor` and report its verdict.
 
 ## Phase 5 — out-of-tree state
@@ -234,7 +288,11 @@ every re-rendered one, in the same pass.
 **`--all`** is the `U_new = ∅` case of the same algorithm, plus: the confirmed
 `.gitignore` line removal; the offered (never forced) removal of the plugin
 registrations; and deleting `.agentic/agentic-os/{install.json,doctor.json}`
-**last**, so a crash mid-run still leaves a readable journal. The repo must end
+**last**, so a crash mid-run still leaves a readable journal — and only when
+no file agentic-os wrote (any non-adopted journal entry) is still on disk.
+If the installer kept some (a declined deletion, or a file whose identity
+changed), keep the journal and report them; deleting it would leave them
+untracked. The repo must end
 in a state where `/agentic-init --presets <anything>` produces exactly what it
 would on a never-installed repo.
 

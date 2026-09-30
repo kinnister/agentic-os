@@ -19,5 +19,5 @@ Kicks off a hands-off agentic-sdlc run: the pipeline clears its own judgment gat
 ## What It Needs
 
 - `.agentic/guides/project.md`, `.agentic/guides/git-workflow.md`, and `.agentic/guides/quality-gates.md` — run `repo-guides` first if these aren't there yet.
-- superpowers plugin >= 5.0.7.
+- superpowers plugin >= 6.1.0.
 - A clean working tree, either already on a feature branch or on a base branch the run can branch from.

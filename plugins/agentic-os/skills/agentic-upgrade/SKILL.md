@@ -5,6 +5,24 @@ version: 0.1.0
 license: Apache-2.0
 ---
 
+## Shared contract preflight
+
+Before workflow actions, send this JSON request to the installed plugin's
+`runtime/run.py` using Python 3.10+ (resolve the plugin root on the current host):
+
+```json
+{"api_version":"1.0.0","operation":"policy.resolve","entrypoint":"agentic-upgrade"}
+```
+
+Use the returned policy and `references/runtime-contracts.md` for contract identifiers,
+limits and dependency floors. Unknown fields or incompatible versions block startup.
+Task envelopes use `contract_version: "1.0.0"` and `task_input`; legacy `raw_input`
+is accepted only by the explicit `input.normalize` compatibility adapter with `legacy: true`.
+This preflight validates policy; durable lifecycle and host enforcement are separate
+capabilities. Never infer those capabilities from a successful policy response.
+
+
+
 # agentic-upgrade — scaffold updater
 
 You reconcile the target repo's scaffold with the newer plugin templates.
@@ -42,6 +60,24 @@ write is indistinguishable from corruption.
    re-run).
 
 ## Phase 2 — Per-file three-way reconciliation
+
+Every write below goes through the runtime operations in init's "How journal
+and file writes happen": **overwrite** an untouched managed file →
+`install.apply` (no confirmation needed); **take new** on a user-modified file →
+`install.apply` with `expect_sha256` = `CURRENT` and the owner the journal
+records (`managed` or `generated`) — the replacement content is ours again;
+**accept regeneration** of an `owner: "generated"` file → `install.apply` with
+`expect_sha256` = `CURRENT` and `owner: "generated"` (never a plain apply,
+which would preserve the file and record it user-owned);
+**keep mine** → `install.apply` without a
+confirmation (the installer preserves it and records it user-owned);
+**merge by hand** → `install.apply` for the `.ao-new` path with
+`owner: "user"`, so a later uninstall never deletes it as a managed file; if a
+previous upgrade already left that `.ao-new`, send its current sha256 as
+`expect_sha256` (with `owner: "user"`) to refresh it — a plain apply is
+reported `preserved` and leaves the old render. The journal stamp in
+Phase 4 is the `agentic_os_version` field of those requests or
+`install.record`.
 
 For every journal entry with a template ID (the destination map lives in
 `skills/agentic-init/SKILL.md` Phase 4), compute:
@@ -89,6 +125,9 @@ agents; init Phase 4 step 7)**
 
 **Managed blocks (`CLAUDE.md`, and `AGENTS.md` when it was installed as an
 appended block on a mature repo)**
+- A block file the journal records user-owned (it pre-existed install) is
+  still refreshed: apply the merged text under init's merge rule
+  (`expect_sha256` of its current bytes); it stays user-owned.
 - Replace the content between `<!-- agentic-os:begin v… -->` and
   `<!-- agentic-os:end -->` **wholesale** with the newly rendered block (the
   begin marker carries the new version stamp — it is rendered from

@@ -20,6 +20,13 @@ render its verdict. You do three things and nothing more:
 
 > **Prepare context → Invoke orchestrator → Present verdict.**
 
+When invoked inside a managed run, persist review evidence and the gate decision
+through the runtime authority described in
+`../../references/runtime-authority.md`. The review artifact is a human-readable
+output; it does not itself advance lifecycle state.
+Use `legacy.export` when older ledger readers need a refreshed compatibility
+view; do not append a review verdict directly to JSONL.
+
 All the actual review reasoning — the `blind`, `edge-case`, and `acceptance`
 lenses, standards/security adjudication, finding triage, and the machine verdict —
 lives in the `code-review-orchestrator` skill. You do not reason about the code

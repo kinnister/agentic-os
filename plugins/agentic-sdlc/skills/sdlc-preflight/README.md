@@ -25,7 +25,7 @@ Nothing from you. It inspects the local environment directly:
 
 | Check | Requirement |
 |---|---|
-| superpowers plugin | installed and resolvable, superpowers plugin >= 5.0.7 |
+| superpowers plugin | installed and resolvable, superpowers plugin >= 6.1.0 |
 | Node.js | any recent LTS release |
 | Git | installed |
 

@@ -1,0 +1,29 @@
+{
+  "archives": {
+    "baseline.tar": "84c5556fa34c35019dd3baabc735d5189c2aeb81bed0a00181392b42267f0b2b",
+    "superpowers.tar": "93649811f58ace505bcd893328dcd31c9221ff7c3d1158b4585f34fdabf215af"
+  },
+  "baseline_revision": "dabd182e049cc6fb52007da988bf03762130c459",
+  "deferred": [
+    "executable observer freeze",
+    "host certification",
+    "48 scored live trials"
+  ],
+  "definitions": {
+    "challenge-spec.json": "7d78dbf6c66a025170358cfbac2eebe2251d27f55b943488621fb79d7789a507",
+    "rubric.json": "43c5708627f075335a7bafab36adf9bb07bb462a87560634eade9ca0803b71f1",
+    "scenarios.py": "154ce43c573b0b049f51b36c852b525974afe6d410f135e85c278d0922ce77d9"
+  },
+  "dependency": {
+    "name": "superpowers",
+    "revision": "b36e0829c6d0140e93cfef2ca599b1b07d4a7797",
+    "snapshot_kind": "actual-files-excluding-git-metadata",
+    "tracked_changes": [
+      "D\tAGENTS.md"
+    ],
+    "version": "6.3.0"
+  },
+  "live_trials_consumed": 0,
+  "schema": 1,
+  "stage": "behavioral-definitions-only"
+}

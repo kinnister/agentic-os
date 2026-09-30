@@ -9,6 +9,23 @@ description: Lightest-ceremony entry point into the agentic-sdlc pipeline for a 
 
 # sdlc-direct
 
+## Shared contract preflight
+
+Before workflow actions, send this JSON request to the installed plugin's
+`runtime/run.py` using Python 3.10+ (resolve the plugin root on the current host):
+
+```json
+{"api_version":"1.0.0","operation":"policy.resolve","entrypoint":"sdlc-direct"}
+```
+
+Use the returned policy and `references/runtime-contracts.md` for contract identifiers,
+limits and dependency floors. Unknown fields or incompatible versions block startup.
+Task envelopes use `contract_version: "1.0.0"` and `task_input`; legacy `raw_input`
+is accepted only by the explicit `input.normalize` compatibility adapter with `legacy: true`.
+This preflight validates policy; durable lifecycle and host enforcement are separate
+capabilities. Never infer those capabilities from a successful policy response.
+
+
 Minimum-ceremony SDLC flow for work the user has already declared simple and clear. No spec
 document, no complexity scoring, no brainstorming session — just a mandatory research pass, a
 bounded clarity check, and straight into planning. Human-in-the-loop at every judgment gate,
@@ -100,10 +117,10 @@ store is reserved for the heavy pipeline.
 
 ### Stage 0 — Pre-flight
 
-1. Confirm `superpowers:brainstorming` resolves at >= 5.0.7 and `git --version` succeeds. If
+1. Confirm `superpowers:brainstorming` resolves at >= 6.1.0 and `git --version` succeeds. If
    either is unresolvable, print:
    ```
-   sdlc-direct requires the superpowers plugin (>= 5.0.7).
+   sdlc-direct requires the superpowers plugin (>= 6.1.0).
    Install: /plugin marketplace add obra/superpowers && /plugin install superpowers
    ```
    and HALT.

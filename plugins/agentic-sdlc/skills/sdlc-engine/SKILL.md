@@ -1,11 +1,33 @@
 ---
 name: sdlc-engine
-description: Heavy orchestrator that runs the full 13-stage (Phase 0-12) governed SDLC flow for a single unit of work. Invoke this skill only as the execution engine dispatched by sdlc-guided (mode=hitl) or sdlc-auto (mode=autonomous) — never in direct response to a bare user request, and never with a mode other than hitl or autonomous. Trigger phrases that mean "call sdlc-engine" arrive pre-translated through those two entry skills: "start sdlc", "implement this with sdlc", "run autonomously", "factory mode", "ship this without asking", a resumed run handed back from sdlc-runs. Owns run bootstrap, branch safety, complexity routing, spec/plan approval, TDD implementation with evidence capture, deferred two-round code review, QA gates, feature verification, and handoff. mode is the only branching input between the two calling styles: phase sequence, artifact shapes, file paths, and gate ids are identical either way — only the gate-arbiter behavior at each judgment gate differs. Not for: direct user invocation (sdlc-guided and sdlc-auto are the only entry points) or lightweight flows (sdlc-brief, sdlc-direct).
+description: Heavy orchestrator that runs the full 13-stage (Phase 0-12) governed SDLC flow for a single unit of work. Invoke this skill only as the execution engine dispatched by sdlc-guided (mode=hitl) or sdlc-auto (mode=autonomous) — never in direct response to a bare user request, and never with a mode other than hitl or autonomous. Trigger phrases that mean "call sdlc-engine" arrive pre-translated through those two entry skills: "start sdlc", "implement this with sdlc", "run autonomously", "factory mode", "ship this without asking", a resumed run handed back from sdlc-runs. Owns run bootstrap, branch safety, complexity routing, spec/plan approval, TDD implementation with evidence capture, deferred bounded code review, QA gates, feature verification, and handoff. mode is the only branching input between the two calling styles: phase sequence, artifact shapes, file paths, and gate ids are identical either way — only the gate-arbiter behavior at each judgment gate differs. Not for: direct user invocation (sdlc-guided and sdlc-auto are the only entry points) or lightweight flows (sdlc-brief, sdlc-direct).
 discoverable: false
 
 ---
 
 # sdlc-engine
+
+## Availability and contract authority
+
+The bundled runtime supports contract validation, policy resolution, durable lifecycle
+persistence, bounded dispatch, decisions, evidence, reconciliation, and regenerable exports.
+Managed lifecycle operations must be available before running this workflow. An unavailable
+operation blocks the requested managed action with an explicit limitation.
+Do not emulate initialization, dispatch, gate resolution, resume, or transitions by writing
+JSON/JSONL files, and do not report a managed run as started or completed.
+
+`runtime/agentic_runtime/registry.json` is the sole source for identifiers, transitions, and
+defaults; the plugin-local runtime is the identical bundled source. Consult generated
+`references/runtime-contracts.md` for its readable projection.
+
+Resolve policy before any workflow mutation with `${CLAUDE_PLUGIN_ROOT}/runtime/run.py`.
+The caller supplies `hitl` or `autonomous` as an explicit override; for example:
+
+```json
+{"api_version":"1.0.0","operation":"policy.resolve","entrypoint":"sdlc-engine","overrides":{"mode":"hitl"}}
+```
+
+Policy resolution does not create a run or authorize unavailable lifecycle operations.
 
 ## Purpose
 
@@ -13,7 +35,7 @@ You are the single orchestrator behind every governed SDLC run in this plugin. `
 `sdlc-auto` are thin wrappers: each normalizes its caller's intent into a `task_input` and a
 `mode`, then dispatches you. From that point forward you own the run end to end — bootstrapping the
 run directory, routing through complexity, driving spec/plan approval, supervising TDD
-implementation, running the deferred two-round code review, executing QA gates and feature
+implementation, running the deferred bounded code review, executing QA gates and feature
 verification, and handing off. `sdlc-runs` retains resume and repair authority over runs you
 produce; you must leave behind evidence it can act on, but you do not implement resume/repair
 yourself beyond honoring the run state you are handed.
@@ -57,18 +79,68 @@ exists to prevent.
 | `task_input` | caller | raw text, external work-item reference, spec path, or greenfield idea |
 | `run_id` (resume only) | `sdlc-runs` | when resuming, the caller supplies an existing run_id instead of you minting one |
 
-## Run identity and layout
+## Intended lifecycle and storage (requires lifecycle operations)
 
-- Mint `run_id = YYYYMMDD-HHMM-<branch>` at Phase 0 unless a `run_id` was supplied for resume.
-- Run root: `<repo>/docs/superpowers/runs/<run_id>/`. Every artifact below is relative to this
-  directory unless marked otherwise.
-- Idempotent phase outputs (`meta.json`, `complexity.json`, `design.md`, `plan.md`,
-  `review-bundle.json`, `qa-checklist.md`, `qa-test-review.md`, `verification-evidence.json`, and
-  each `evidence/<task-id>.json`) live at fixed filenames and are overwritten in place on re-entry.
-  `events.jsonl` and `decisions.jsonl` are the only append-only exceptions — never truncate or
-  rewrite them, only append.
-- Never adopt, copy, or symlink an artifact from a sibling run directory, under any circumstance.
-  Run isolation is absolute even when two runs target the same branch or ticket.
+Before any run-artifact write, establish branch/worktree ownership and inspect the working tree
+and upstream. Do not reset, commit, or discard unrelated changes. Autonomous dirty-tree work
+requires explicit project policy or must stop. Each mutating worker uses an isolated worktree
+and owns a specific file set; serialize dependent work. SQLite is not a checkout sandbox.
+
+The runtime database `.agentic/state/runtime.sqlite3` is the authority for lifecycle state.
+Run artifacts at `.agentic/runs/<run-id>/` are regenerable exports, including metadata, events,
+decisions, review reports, and evidence. Human-authored specs, plans, and work-item documents
+remain under `docs/superpowers/`. Never replace those documents with database-only content.
+Legacy `meta.json`, `events.jsonl`, and `decisions.jsonl` files are compatibility views generated
+with `legacy.export`; editing them never changes runtime state.
+Never adopt sibling-run artifacts without explicit provenance and supported reconciliation.
+
+Run states are `pending`, `running`, `waiting_for_user`, `interrupted`,
+`reconciliation_required`, `completed`, `failed`, and `cancelled`. The registry defines legal
+transitions. Resume and reconciliation must use runtime operations and durable database state,
+not an export's phase counter, JSONL replay, or manual metadata edits. Missing runtime operations
+block; export validation alone does not implement them. A failure to persist an authoritative
+decision blocks progression; export regeneration failures do not erase a committed decision.
+
+All phase steps below require supported lifecycle operations. Optional external-adapter failure
+may degrade only when authoritative local runtime persistence is available; it never licenses
+a JSON fallback for missing runtime operations. Only the coordinator resolves gates and dispatches.
+Review and resolver workers are advisory. Registry worker defaults are story 3, bug 2,
+hotfix/spike/epic 1; epic children run sequentially.
+
+### Resume and assignment recovery
+
+When dispatched with an existing `run_id`, first call `run.status` and confirm the run is
+`running` under the current coordinator lease. Inspect `.agentic/runs/<run-id>/run.json` only
+after regenerating it with `run.export`; it projects assignments, messages, events, evidence,
+and dispatch reservations. Continue existing assignment IDs with their recorded owners. Do not
+replace an unavailable owner or infer a completed assignment from prose or a changed checkpoint.
+User-owned fixture and checkpoint files are immutable inputs; preserve them byte for byte and
+keep progress in managed runtime state.
+
+For each actual worker dispatch, reserve it with `task.dispatch`, refresh the run revision, then
+start its worker lease with `dispatch.start` before launching the worker. This binds the recorded
+worker and applies the concurrency, active-run, and dispatch-deadline limits. Refresh the revision
+again after start and finish the dispatch with `task.result`; if it times out, reconcile it with
+`dispatch.recover` before considering another attempt. A worker's completion report alone does not
+complete its assignment. Transition the corresponding assignment through `assignment.transition`
+with its current assignment revision, run revision, lease epoch, coordinator ID, and recorded
+worker ID. Validate the owned-path diff and acceptance evidence before transitioning to
+`completed`. If work cannot be tied to its existing assignment, its owner is unavailable, or
+runtime state cannot be updated, stop that branch of work and escalate. Never rewrite exported JSON
+or create a replacement assignment to make the run appear complete.
+
+Before handoff or a completion claim, refresh authoritative state and the run export. Any
+assignment still pending, running, waiting, or escalation-required prevents a claim that all
+delegated work completed. The runtime implements `run.complete`, but the shipped host adapter
+does not yet provide an integrated path to produce its trusted host-signed gate and evidence
+claims. Leave the run active and report that host integration limitation until that path is
+certified.
+
+If `sdlc-runs` passes a response to a gate that was waiting for the user, do not treat the resume
+request itself as approval. Verify the gate ID and current artifact hash, submit the supplied
+response through `gate-arbiter`, and persist that exact decision with `decision.record` under the
+current coordinator lease before advancing. If the decision is missing, stale, or does not match
+the artifact, stop and ask the user again.
 
 ## Phase map
 
@@ -82,17 +154,17 @@ exists to prevent.
 | 5 | Plan | no | `plan.approved` |
 | 6 | QA Checklist | per `phase_set` | `qa-checklist.approved` |
 | 7 | Implementation | no | — |
-| 8 | QA Test Review | per `phase_set` | — |
-| 9 | Final code review (two rounds) | never once Phase 7 is reached | `code-review.check`, `code-review.final` |
+| 8 | QA Test Review | per `phase_set` | `qa-tests.approved` |
+| 9 | Final code review (bounded retries) | never once Phase 7 is reached | `code-review.check`, `code-review.final` |
 | 10 | QA gates + feature verification | never once Phase 7 is reached | `qa.drift`, `feature.verification` |
 | 11 | QA Health Update | per `phase_set` | — |
 | 12 | Handoff | no | — |
 
 `phase_set` is computed from the work-type classification and the Phase 3 routing decision (see
 `${CLAUDE_PLUGIN_ROOT}/references/phase-routing.md` for the full derivation table). Phases outside
-`phase_set` are written into `meta.json.phases["<n>"].status = "skipped"` and stay skipped for the
+`phase_set` are recorded as skipped through runtime operations and projected into metadata and stay skipped for the
 life of the run — you never reconsider a skip decision later. Phase 4 is the clearest case: it runs
-only when Phase 3 resolves `routing = brainstorming`; the `writing-plans` fast path skips straight
+when Phase 3 resolves `routing = brainstorming`, or unconditionally for a spike; the `writing-plans` fast path skips straight
 from Phase 3 to Phase 5. Phases 9 and 10 are the hard floor — once Phase 7 begins, both always run,
 regardless of `phase_set`.
 
@@ -100,7 +172,7 @@ regardless of `phase_set`.
 
 ### Phase 0 — Doctor + memory load
 
-1. Resolve `run_id` (mint new, or accept the resumed one) and create the run directory.
+1. Resolve run identity through supported runtime operations only after establishing branch/worktree ownership and checking the working tree. Unavailable operations block. Do not create a managed run directory with the current bundle.
 2. Read `.agentic/agentic-sdlc/doctor.json` and `.agentic/agentic-sdlc/config.json`. If doctor state
    looks stale, this is a signal to suggest `sdlc-preflight`, not a reason to block — proceed on the
    config you have.
@@ -109,12 +181,9 @@ regardless of `phase_set`.
    Do not re-read `memory_brief` mid-run under any circumstance — Phase 0 is its only load point.
    `config.memory.auto_write_on` governs whether later phases are allowed to write new memory, not
    whether you may re-read it.
-4. Write `meta.json` with the full top-level field set: `run_id`, `mode`, `started_at`,
-   `task_input`, `branch`, `work_item.canonical_path`, `work_item.run_mirror`,
-   `work_item.event_ledger`, `current_phase`, `status`, `escalate_on`, `loops`, `phases` (keys
-   `"0"`–`"12"`, each `{"status": ...}`), `classification`, `phase_set`, `branch_guard`. Validate
-   against `meta.schema.json` immediately after writing.
-5. Emit `phase.started` for Phase 0, then `phase.completed` once the above is durable.
+4. When lifecycle persistence exists, initialize authoritative state through runtime operations;
+   metadata and events are regenerable exports, not directly written authoritative state.
+5. Record Phase 0 start/completion through those operations only after required checks pass.
 
 ### Phase 1 — Requirements
 
@@ -150,8 +219,7 @@ regardless of `phase_set`.
 4. **Autonomous dirty-tree handling** — halt on any dirty tree (`branch_guard.decision = "halted"`)
    unless project policy explicitly permits auto-stash. Never hard-reset, never commit the user's
    changes, never proceed dirty without policy backing, in autonomous mode.
-5. Create the feature branch in the current checkout. Do not create a git worktree on Claude/Codex
-   hosts for this — feature branches only.
+5. Confirm the owned feature branch/worktree established before run-artifact writes. Give every mutating worker an isolated worktree; SQLite does not sandbox checkout changes.
 
 ### Phase 3 — Complexity scoring
 
@@ -167,19 +235,18 @@ Apply the heuristic fast paths before ever dispatching an agent:
   the `premium` model tier at every subsequent dispatch in this run (see Model tier resolution).
 - A `sizing-analyst` result of `"split-required"` halts the run — do not attempt to force a score.
 - Write `complexity.json` (validate against `complexity.schema.json`), finalize `phase_set` per
-  `${CLAUDE_PLUGIN_ROOT}/references/phase-routing.md`, and record both on `meta.json`.
+  `${CLAUDE_PLUGIN_ROOT}/references/phase-routing.md`, and record both through supported runtime operations; metadata is an export.
 
 ### Phase 4 — Spec (conditional)
 
-Runs only when Phase 3 routing resolved to `brainstorming`.
+Runs when Phase 3 routing resolved to `brainstorming`, or unconditionally for a spike.
 
 1. Dispatch `superpowers:brainstorming` to shape `design.md`, grounded in `requirements.md` and any
    `codebase-scout` findings gathered so far.
 2. If open questions remain, route `spec.clarification` through `gate-arbiter`, bounded by the
    same `max_clarifying_questions_per_phase` budget as Phase 1.
 3. Route `spec.approved` through `gate-arbiter`. A revision request increments loop
-   `spec.revision` (cap 3, halt on exceed) — only agent-initiated revisions count; a manual edit the
-   user makes directly to `design.md` does not increment the counter.
+   `spec.revision` (cap 3, halt on exceed) — every managed retry counts, including user-requested reruns. Direct document edits alone are not an attempt.
 4. `max_clarifying_questions_per_phase` never auto-approves `spec.approved` — exhausting the
    question budget forces an explicit gate call, not a default yes.
 
@@ -190,7 +257,7 @@ Runs only when Phase 3 routing resolved to `brainstorming`.
    carry an explicit `Test-first: yes` or `Test-first: no` annotation; this drives Phase 7 evidence
    validation.
 2. Route `plan.approved` through `gate-arbiter`. A revision request increments loop
-   `plan.revision` (cap 3, halt on exceed), agent-initiated retries only.
+   `plan.revision` (cap 3, halt on exceed), including user-requested retries.
 
 ### Phase 6 — QA Checklist
 
@@ -220,7 +287,7 @@ Runs only when Phase 3 routing resolved to `brainstorming`.
    completeness, producing `qa-test-review.md`.
 2. A failed review retries under loop `qa-test-review.retry` (cap 1, escalate on exceed).
 
-### Phase 9 — Final code review (two rounds)
+### Phase 9 — Final code review (bounded retries)
 
 1. Build `review-bundle.json`: `schema`, `diff_base`, `changed_files`, `diffstat`
    (`files`, `added`, `removed`), `risk_flags`, `evidence_summaries`, `artifact_refs`. Validate
@@ -229,17 +296,11 @@ Runs only when Phase 3 routing resolved to `brainstorming`.
    the full checklist body). The orchestrator applies its own methodology from
    `code-review-orchestrator/references/review-lenses.md` — you do not duplicate review-lens logic
    here.
-3. **Round 1** is the full implementation review. Route its outcome through `code-review.check`. If
-   it surfaces findings, dispatch a fix-up implementation pass and increment loop
-   `code-review.fixup` (cap 2, halt on exceed — two rounds is the hard ceiling).
-4. **Round 2** is findings-only: verify the fix-up diff resolves Round 1's findings. Do not re-review
-   the full implementation in Round 2 unless the fix-up diff itself raises a new high-risk flag
-   (`security`, `breaking-change`, `public-api`) not present in Round 1.
-5. Route final disposition through `code-review.final`.
-
-> Two model-review opportunities per run, no more. A third pass on the same implementation spends
-> tokens without changing the shape of the risk — if Round 2's fix-up is still unacceptable, that is
-> a signal to halt and escalate, not to keep spending review rounds.
+3. Initial review uses `code-review.final`. Reports are advisory; the coordinator resolves the gate.
+4. Findings trigger fix-up attempts under `code-review.fixup`, whose registry cap counts retries
+   after the initial attempt. Each `code-review.check` reviews original findings and the fix-up diff.
+   Widen review only when new high-risk flags appear or the user explicitly requests it.
+5. Accept a successful final permitted retry. A failed exhausted budget halts before another attempt.
 
 - Deterministic artifact shape/schema failures (a malformed `review-bundle.json`, a missing field)
   are fixed with direct, deterministic instructions — never dispatch a model reviewer to fix a
@@ -285,13 +346,11 @@ passes, when Phase 11 is in `phase_set`.
    `work_item.transitioned`.
 2. Reconcile the two work-item mirrors — the canonical Markdown store at
    `docs/superpowers/work-items/work-item-events.jsonl` and the run-local mirror at
-   `<run_dir>/work-item.md` — by priority order: `events.jsonl` always outranks either Markdown
-   mirror when they disagree. Emit `work_item.reconciled` once resolved.
+   `<run_dir>/work-item.md` — by priority order: `the runtime database is authoritative for lifecycle state when they disagree. Emit `work_item.reconciled` once resolved.
 3. Hand off to `mr-submit` for commit, push, and MR/PR creation. If the caller wants hands-off
    monitoring after that, chain into `mr-watch` — it is a separate skill you dispatch, not logic you
    inline here.
-4. Beyond this point, resume/repair authority belongs to `sdlc-runs`. Leave `meta.json.status` and
-   `events.jsonl` in a state it can act on without needing you to re-derive anything.
+4. Beyond this point, resume/repair authority belongs to `sdlc-runs`. Leave durable runtime state and regenerable exports that supported resume operations can inspect.
 
 ## Judgment gates and gate-arbiter
 
@@ -301,35 +360,31 @@ inlined full documents): `kind` (`"spec"|"plan"|"diff"|"qa-report"|"evidence"`),
 
 - **hitl**: every judgment gate prompts the user directly. Never use an autonomous fast-path,
   a deterministic default, or a subagent stand-in verdict to approve a gate in this mode.
-- **autonomous**: cheap deterministic checks and fast-path approvals run first; only fall back to a
+- **autonomous**: deterministic checks, then mandatory escalation checks, precede eligible fast-path approvals; only fall back to a
   stand-in subagent verdict (e.g. `lead-proxy` for `feature.verification`, `story-proxy` for epic
   decomposition) when no deterministic path resolves the gate.
 
 Gate ids in this run, verbatim: `requirements.ambiguous`, `spec.clarification`, `spec.approved`,
 `plan.approved`, `code-review.final`, `code-review.check`, `qa.drift`, `feature.verification`,
-`classification.confirm`, `qa-checklist.approved`.
+`classification.confirm`, `qa-checklist.approved`, `qa-tests.approved`.
 
-`gate-arbiter` records every verdict to both `decisions.jsonl` (schema `decision-line.schema.json`)
-and `events.jsonl` (`decision.recorded`) with prior context, and enforces the escalation rule tied to
-`meta.json.escalate_on`. A `decisions.jsonl` write failure never blocks the run.
+The coordinator commits every gate decision through supported runtime operations after mandatory
+escalation checks. Resolver/reviewer reports are advisory. Authoritative persistence failure blocks;
+export write failure may be repaired after a successful commit.
 
-## Loop caps
+## Retry accounting
 
-| Loop id | Cap | On exceed |
-|---|---|---|
-| `spec.revision` | 3 | halt |
-| `plan.revision` | 3 | halt |
-| `evidence.retry:<task-id>` | 2 | escalate |
-| `qa-test-review.retry` | 1 | escalate |
-| `code-review.fixup` | 2 | halt (two rounds max) |
-| `gate-runner.retry` | 2 | escalate |
-| `acceptance-check.retry` | 2 | escalate |
+Read loop IDs, `max_retries`, and `on_cap` from the registry; `references/gate-catalog.md`
+explains their use. A cap counts retries **after the initial attempt**. Evaluate success before
+exhaustion: exhausted budgets prevent another attempt but never invalidate success. All
+managed retries count, including user-requested reruns. Resume does not reset counters. Extra
+attempts require an explicit recorded budget increase before dispatch.
 
-Only an agent-initiated retry increments a counter. A manual fix the user makes by hand — editing a
-file directly, re-running a command themselves — never increments any loop counter. Loop state lives
-in `meta.json.loops`; an exceeded cap emits `loop.capped` before the halt/escalate takes effect.
-Consult `${CLAUDE_PLUGIN_ROOT}/references/gate-catalog.md` (§ Loop caps) as the authoritative source
-if a cap value here and in that reference ever appear to diverge — the reference file governs.
+`spec.revision`, `plan.revision`, `evidence.retry:<task-id>`, `qa-test-review.retry`,
+`code-review.fixup`, `gate-runner.retry`, `acceptance-check.retry`, and
+`arbiter.malformed.retry` are stable IDs. Evidence retries are per task. On failed exhaustion,
+the coordinator records the prescribed interruption or escalation through supported runtime
+operations. It does not increment export JSON or invent additional attempts.
 
 ## Model tier resolution
 
@@ -351,13 +406,9 @@ hardcoded here. Adapter absence or failure degrades to local-only history plus a
 
 ## Resume and idempotency
 
-- Resume off `events.jsonl` first — it takes priority over any Markdown artifact when the two
-  disagree about run state. Never resume off a simple phase counter; reconstruct current phase and
-  loop state from the append-only event stream.
-- Idempotent phase outputs are safe to overwrite on re-entry; do not skip regenerating one just
-  because the file already exists on disk — regenerate it, then let it be overwritten.
-- `status.repaired` is emitted by `sdlc-runs`, not by you — if you observe it in `events.jsonl` on
-  a resumed run, trust the repaired state it recorded rather than re-deriving your own guess.
+Resume/reconciliation require supported runtime operations and database state. Never replay JSONL
+or edit metadata to simulate them. Preserve human documents and verified evidence; use operation
+idempotency rather than blindly overwriting artifacts. Unavailable operations block with the current bundle.
 
 ## Run-state artifacts and schema validation
 
@@ -388,7 +439,7 @@ python3 ${CLAUDE_PLUGIN_ROOT}/scripts/validate-run-artifact.py <schema> <artifac
 
 ## How this skill uses its references/ tree
 
-- `${CLAUDE_PLUGIN_ROOT}/references/gate-catalog.md` — authoritative loop-cap table (§ Loop caps);
+- `${CLAUDE_PLUGIN_ROOT}/references/gate-catalog.md` — explanatory loop accounting; registry values are authoritative;
   consult it whenever incrementing or checking a loop counter.
 - `${CLAUDE_PLUGIN_ROOT}/references/tokenomics.md` — token-cost guidance for fast-path-vs-dispatch
   decisions at Phase 3 and every subsequent agent dispatch.
@@ -405,23 +456,21 @@ python3 ${CLAUDE_PLUGIN_ROOT}/scripts/validate-run-artifact.py <schema> <artifac
 - `${CLAUDE_PLUGIN_ROOT}/references/lifecycle-artifacts.md` — canonical shapes and paths for every
   run-state artifact listed above, consulted whenever writing or reconciling a work-item mirror.
 
-## Outputs
+## Intended outputs (after lifecycle implementation)
 
-- Populated run directory `<repo>/docs/superpowers/runs/<run_id>/` with every artifact listed above.
-- Updated canonical ledger `docs/superpowers/work-items/work-item-events.jsonl`.
+- Populated run directory `.agentic/runs/<run-id>/` with every artifact listed above.
+- Updated human work-item documents and regenerable ledger exports; database owns lifecycle state.
 - Updated `.agentic/guides/testing/qa-health.md` (Phase 11, when in `phase_set`).
 - A feature branch in the current checkout, carrying the implementation, ready for `mr-submit`.
-- `meta.json.status` and `events.jsonl` left in a state `sdlc-runs` can resume or repair from
-  without re-deriving anything.
+- Intended durable database state for supported resume/repair operations; trusted run completion remains unsupported by the current bundle.
 
 ## Non-goals
 
 - Does not re-implement logic already owned by the `superpowers` skills it dispatches into.
 - Does not dispatch a model reviewer to fix artifact shape/schema failures — those get deterministic
   fix instructions only.
-- Does not create git worktrees on Claude/Codex hosts — feature branches only, in the current
-  checkout.
-- Does not treat a `decisions.jsonl` write failure as run-blocking.
+- Does not dispatch mutating workers without isolated worktrees.
+- Does not treat export failure as a lost committed decision; authoritative commit failure blocks.
 - Does not re-read `memory_brief` mid-run — loaded once, at Phase 0.
 - Does not inline full spec/plan/diff bodies into gate prompts — `ArtifactRefs` plus capped
   summaries only.
