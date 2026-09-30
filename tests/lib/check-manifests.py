@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-AUTHOR = {"name": "Yaroslav Krivushenko", "url": "https://github.com/Jarroslav"}
+AUTHOR = {"name": "Yaroslav Krivushenko", "url": "https://github.com/kinnister"}
 HOST_DIRS = (".claude-plugin", ".cursor-plugin", ".codex-plugin")
 
 fail = 0

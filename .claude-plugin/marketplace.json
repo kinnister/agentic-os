@@ -4,7 +4,7 @@
   "description": "A governed, portable engineering platform for coding agents: the governance layer (agentic-os), the SDLC pipeline that runs on it (agentic-sdlc), and a standalone Quality Engineering blueprint catalog and scaffolder (agentic-qe). Evidence-grounded repo discovery, audited agent contracts, HITL escalation, and hard enforcement gates.",
   "owner": {
     "name": "Yaroslav Krivushenko",
-    "url": "https://github.com/Jarroslav"
+    "url": "https://github.com/kinnister"
   },
   "plugins": [
     {

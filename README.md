@@ -1,6 +1,6 @@
 # agentic-os
 
-[![CI](https://github.com/Jarroslav/agentic-os/actions/workflows/ci.yml/badge.svg)](https://github.com/Jarroslav/agentic-os/actions/workflows/ci.yml)
+[![CI](https://github.com/kinnister/agentic-os/actions/workflows/ci.yml/badge.svg)](https://github.com/kinnister/agentic-os/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Install: Claude Code plugin](https://img.shields.io/badge/install-Claude%20Code%20plugin-5A2EBB)](#install)
 [![Install: Cursor plugin](https://img.shields.io/badge/install-Cursor%20plugin-000000)](#install)
@@ -28,7 +28,7 @@ terms (HITL, gate, preset…) are one-liners in the [Glossary](#glossary).
 
 ## Start here
 
-> **Prefer a walk-through?** The **[role-based setup guides](https://jarroslav.github.io/agentic-os/setup/)**
+> **Prefer a walk-through?** The **[role-based setup guides](https://kinnister.github.io/agentic-os/setup/)**
 > cover the same install for every role preset — pick your role (developer, QA,
 > BA/PO, architect, DevOps, PM, portfolio, security, data, design) and follow
 > the checklist, quick or fully guided.
@@ -230,7 +230,7 @@ Confirm version ≥ 6.1.0 on the plugin card or via **sdlc-preflight** after equ
 Install **superpowers** ([above](#install-superpowers)), then add this marketplace:
 
 ```
-/plugin marketplace add Jarroslav/agentic-os
+/plugin marketplace add kinnister/agentic-os
 /plugin install agentic-os@agentic-os
 /plugin install agentic-sdlc@agentic-os
 ```
@@ -238,7 +238,7 @@ Install **superpowers** ([above](#install-superpowers)), then add this marketpla
 Or try it straight from a local clone, no publish needed:
 
 ```
-git clone https://github.com/Jarroslav/agentic-os
+git clone https://github.com/kinnister/agentic-os
 # in Claude Code:
 /plugin marketplace add /absolute/path/to/agentic-os
 /plugin install agentic-os@agentic-os
@@ -260,7 +260,7 @@ You will not find it by searching Browse Marketplace → **All**.
 2. **Add marketplace** and paste the Git clone URL (must end in `.git`):
 
    ```
-   https://github.com/Jarroslav/agentic-os.git
+   https://github.com/kinnister/agentic-os.git
    ```
 
    Or, from a local clone:
@@ -289,7 +289,7 @@ If you already use Claude Code with **“Automatically import agent configs from
 other tools”** enabled in Cursor:
 
 ```
-/plugin marketplace add Jarroslav/agentic-os
+/plugin marketplace add kinnister/agentic-os
 /plugin install agentic-os@agentic-os
 /plugin install agentic-sdlc@agentic-os
 ```

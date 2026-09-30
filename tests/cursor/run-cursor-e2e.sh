@@ -74,7 +74,7 @@ cat > "$RESULT_FILE" <<EOF
 
 ## Manual Cursor steps (after marketplace merge)
 
-1. Cursor → Settings → Plugins → Add marketplace → \`$ROOT\` (local clone) or \`https://github.com/Jarroslav/agentic-os.git\`
+1. Cursor → Settings → Plugins → Add marketplace → \`$ROOT\` (local clone) or \`https://github.com/kinnister/agentic-os.git\`
 2. Install **agentic-os** and **agentic-sdlc** from the \`agentic-os\` marketplace
 3. Restart the session
 4. Open this repo in Cursor and run \`/agentic-init --presets ba-po\`

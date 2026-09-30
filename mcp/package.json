@@ -2,19 +2,19 @@
   "name": "agentic-os-mcp",
   "version": "0.3.1",
   "description": "MCP server serving the agentic-os governance, SDLC, and QE methodology. Read-only.",
-  "mcpName": "io.github.Jarroslav/agentic-os",
+  "mcpName": "io.github.kinnister/agentic-os",
   "license": "Apache-2.0",
   "author": {
     "name": "Yaroslav Krivushenko",
-    "url": "https://github.com/Jarroslav"
+    "url": "https://github.com/kinnister"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Jarroslav/agentic-os.git",
+    "url": "git+https://github.com/kinnister/agentic-os.git",
     "directory": "mcp"
   },
-  "homepage": "https://github.com/Jarroslav/agentic-os/tree/main/mcp#readme",
-  "bugs": "https://github.com/Jarroslav/agentic-os/issues",
+  "homepage": "https://github.com/kinnister/agentic-os/tree/main/mcp#readme",
+  "bugs": "https://github.com/kinnister/agentic-os/issues",
   "type": "module",
   "bin": {
     "agentic-os-mcp": "dist/index.js"
