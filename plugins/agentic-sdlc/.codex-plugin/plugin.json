@@ -1,6 +1,6 @@
 {
   "name": "agentic-sdlc",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "A governed delivery pipeline for coding agents. It opens by scanning the repository to lay down a durable repo-guides knowledge base, then carries work from raw idea through story drafting, requirements capture, specification, and planning, pausing at judgment gates before any code is touched. Implementation proceeds test-first and passes through a chained QA delivery gauntlet rather than a single review step. Once checks clear, the plugin drives MR/PR creation and keeps watch on it until it lands, then refreshes the knowledge base from what the merge taught it so the next run starts ahead of where this one began. An interactive pipeline map, served from sdlc.html, lets you see every stage and jump into it directly.",
   "license": "Apache-2.0",
   "author": {

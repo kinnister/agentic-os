@@ -60,7 +60,7 @@ Complete this **before** `/agentic-init` in the repo you want to equip:
 | # | Requirement | How to check |
 |---|-------------|--------------|
 | 1 | **Claude Code** or **Cursor** | Editor running with plugin support |
-| 2 | **`python3`** on PATH | `python3 --version` — enforcement hooks are Python |
+| 2 | **`python3`** 3.10 or newer on PATH | `python3 --version` — enforcement hooks and the installer runtime are Python; the 3.9 bundled with macOS is too old |
 | 3 | **`git`** | Target directory is a git repo (`git status`) |
 | 4 | **`node`** on PATH | `node --version` — checked by **sdlc-preflight** when using **agentic-sdlc** |
 | 5 | **`superpowers`** plugin ≥ **6.1.0** | [Install superpowers](#install-superpowers) |

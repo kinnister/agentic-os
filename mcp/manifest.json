@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "agentic-os-mcp",
   "display_name": "agentic-os",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Read-only MCP server for the agentic-os governance, SDLC, and QE methodology.",
   "author": { "name": "Yaroslav Krivushenko", "url": "https://github.com/kinnister" },
   "license": "Apache-2.0",

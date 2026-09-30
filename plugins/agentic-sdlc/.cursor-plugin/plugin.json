@@ -1,7 +1,7 @@
 {
   "name": "agentic-sdlc",
   "displayName": "Agentic SDLC",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Consolidated agentic SDLC toolkit for coding agents: knowledge foundation, story drafting, requirements -> spec -> plan -> QA, MR/PR creation and watch, knowledge harvester, and an interactive pipeline map (sdlc.html).",
   "author": {
     "name": "Yaroslav Krivushenko",

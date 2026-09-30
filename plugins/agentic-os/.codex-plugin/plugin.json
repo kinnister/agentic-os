@@ -1,6 +1,6 @@
 {
   "name": "agentic-os",
-  "version": "0.14.0",
+  "version": "0.15.0",
   "description": "Governed agent architecture installer and verifier with mature-repository adoption for Codex, Claude, and Cursor.",
   "author": {
     "name": "Yaroslav Krivushenko",

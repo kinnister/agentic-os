@@ -1,7 +1,7 @@
 {
  "schema": 1,
  "_doc": "Committed record of the originality check's per-file results (tests/lib/check-provenance.py). Holds no corpus fingerprints and no salt \u2014 only this repo's own file hashes and the scores they scored. Refresh with --attest after a local --build; CI re-checks it with --verify-attestation, which needs no corpus.",
- "attested_at": "2026-09-30T06:16:41Z",
+ "attested_at": "2026-09-30T06:49:47Z",
  "corpus_file_count": 1892,
  "store_id": "f71a506b3b67fbea651ccf2c01de780da08511c9cd3332402074e681373d6671",
  "salt_id": "21ba8718bed062a6",
@@ -83,7 +83,7 @@
    "max_run": 0
   },
   "README.md": {
-   "sha256": "a1269ba499a3ff8f84d075ab3c116093edaeb6b6d45be086ed28fae043eb4ec7",
+   "sha256": "c608eb3508f80383bcc2c3d8046234732e7b67cc9a8e3bed70f6bdc9fe348aed",
    "line": 0.0,
    "shingle": 0.0,
    "max_run": 0
@@ -131,7 +131,7 @@
    "max_run": 0
   },
   "docs/setup/app.js": {
-   "sha256": "345510cd8f0cf616dc2f31d9a0216b3b9e5467c93e1171f8f9cb1f0524bd4340",
+   "sha256": "ce46a9339d7bd249354d1b3f157bc5c8add085f81606272f9fe96243530158e2",
    "line": 0.0,
    "shingle": 0.0,
    "max_run": 0
@@ -179,7 +179,7 @@
    "max_run": 0
   },
   "mcp/CHANGELOG.md": {
-   "sha256": "c038c1ef16de34227bca0402a22399723d5d04e9658bed96f1590b2692695529",
+   "sha256": "392377bbae1af0f4200295bbc08a894db2dc7981a44d921b5192d00facb34d38",
    "line": 0.0,
    "shingle": 0.0,
    "max_run": 0
@@ -191,25 +191,25 @@
    "max_run": 0
   },
   "mcp/RELEASE.md": {
-   "sha256": "cb62b3604bfc9e9e4970b4d8fcc1202a7240ebdefdf0fd78a0d07d404783bec6",
+   "sha256": "a4ccf378ddd1f69e29d86fdfeafdf112313970926167d7616b2c891b10ba7d85",
    "line": 0.0,
    "shingle": 0.0,
    "max_run": 0
   },
   "mcp/content-index.json": {
-   "sha256": "2fb409fa6478af9a06aca76c4176a2750b233a07c0602e0b9a00643890d90434",
+   "sha256": "07bb537e28473e9e4605ad86f3a3bf04a4e8e001fa1edd755decd824624e881f",
    "line": 0.0,
    "shingle": 0.0,
    "max_run": 0
   },
   "mcp/manifest.json": {
-   "sha256": "d30ce5f7a6305027c1a486a80d61d6daa516ed380229572da875a5bf74e2b5b9",
+   "sha256": "d721a85d302efe12b54cad3df7dcee49fd470c53fa3b13efd5db89fcc7641a96",
    "line": 0.0,
    "shingle": 0.0,
    "max_run": 0
   },
   "mcp/package.json": {
-   "sha256": "a7a507e030d77a191285a2e4ec1c56e06fa24192892bdcd7997c282eddb70bc9",
+   "sha256": "3a6b04c2d2f6dcc273bb29de42fb5ab8597c1a6ef710f3161b2f86c790a3e773",
    "line": 0.1818,
    "shingle": 0.0,
    "max_run": 0
@@ -239,7 +239,7 @@
    "max_run": 0
   },
   "mcp/server.json": {
-   "sha256": "3ac63b2d514bb5509accf88ee309924f3e48e6eae108966dada840870ad26172",
+   "sha256": "225db8896e16a6a94fce26b2b55f5405f56a0f770082e0a0c19b01cebf7e862f",
    "line": 0.0,
    "shingle": 0.0,
    "max_run": 0
@@ -257,7 +257,7 @@
    "max_run": 0
   },
   "mcp/src/index.ts": {
-   "sha256": "6ef2ad2eee5dc3347d5ad05ed342be6890dc0dbd780b895ee2c966273c381faa",
+   "sha256": "a79a0482639f3398c3da502cf7183fbb647e53f49fa0f77dd74b1694cfd84322",
    "line": 0.0204,
    "shingle": 0.0,
    "max_run": 0
@@ -437,25 +437,25 @@
    "max_run": 0
   },
   "plugins/agentic-os/.claude-plugin/plugin.json": {
-   "sha256": "d79d3ad54df1e047bb7945cba8aee8477573e46faabc5d842459d8923b8d9599",
+   "sha256": "de1d30e5143bb090e93c1bf6bb374453e91e0118f0a8167f54c7b2ced352ed21",
    "line": 0.0,
    "shingle": 0.0,
    "max_run": 0
   },
   "plugins/agentic-os/.codex-plugin/plugin.json": {
-   "sha256": "e0131b4d254724dad5d26e4f62853dfff4557ee4987e04df9c6d47e4870d41b8",
+   "sha256": "a3f8e1de62cd7388357d9060c363525601988b02d1dea3bc9733202866e3441d",
    "line": 0.0,
    "shingle": 0.0,
    "max_run": 0
   },
   "plugins/agentic-os/.cursor-plugin/plugin.json": {
-   "sha256": "096ee6c84b7ce35cc8ab87a4459e29eae9c49ac347447988c844a0738d45b137",
+   "sha256": "26bd56089f3c45986c0e58ab16a9498de39ffe1fd59dff4a85627796a2552770",
    "line": 0.0,
    "shingle": 0.0,
    "max_run": 0
   },
   "plugins/agentic-os/CHANGELOG.md": {
-   "sha256": "b63f681b007059c8a6f2ff608a9df1f5df598812f09419caf007970243119904",
+   "sha256": "fd931c68bc13c848d1df96a1d4e05261bbd661ac3e9f3ab18ef1473d7ad426d7",
    "line": 0.0,
    "shingle": 0.0,
    "max_run": 0
@@ -1163,19 +1163,19 @@
    "max_run": 0
   },
   "plugins/agentic-qe/.claude-plugin/plugin.json": {
-   "sha256": "e1fc5fac6fdbfce61e0ab19570aaccf5b85f17b647d3e8ef93fa170ed1b2a7f5",
+   "sha256": "efbbc9a21f6e96783c79cd0d3e2dc59828ccdc854adc9536a0f2191ad664ab1c",
    "line": 0.0,
    "shingle": 0.0,
    "max_run": 0
   },
   "plugins/agentic-qe/.cursor-plugin/plugin.json": {
-   "sha256": "03899c42e42d328e64a55b401a8f9cdfc99009d61c52a5d5e562e30854824ac3",
+   "sha256": "975f890b656b61d2bef23462362539b54b04a6cb38ab8d4c1d7886a21bafd5d2",
    "line": 0.0,
    "shingle": 0.0,
    "max_run": 0
   },
   "plugins/agentic-qe/CHANGELOG.md": {
-   "sha256": "b41801cfdc2b668a26795cb285823efec0afaf945fe1c97fa1ceaf81a8056e3b",
+   "sha256": "0bbb98ca894a36d8c6ae14d9d31cbddb7d275c4b62e930f99092f5b73b40101c",
    "line": 0.0,
    "shingle": 0.0,
    "max_run": 0
@@ -1589,19 +1589,19 @@
    "max_run": 0
   },
   "plugins/agentic-sdlc/.claude-plugin/plugin.json": {
-   "sha256": "95d6d1aafa62239a2f728b6bbc25cbb474a57c8152b734c70520fad72a84ac51",
+   "sha256": "1b7e0dc98ca0cc2dff7ca4e3e31cff5e64dc65df77f937832bda1aae8c5daed9",
    "line": 0.0,
    "shingle": 0.0,
    "max_run": 3
   },
   "plugins/agentic-sdlc/.codex-plugin/plugin.json": {
-   "sha256": "12e599d2969cfd4eda4212bc3ba736166e2a97c72264e35ab80c56c382140351",
+   "sha256": "9bcefb153a1a6999a2c1d7845de551139895cb2974eabaf40c52b39505fbd3f1",
    "line": 0.0,
    "shingle": 0.0,
    "max_run": 0
   },
   "plugins/agentic-sdlc/.cursor-plugin/plugin.json": {
-   "sha256": "3555bc25a4538d4bb0d8757e045a686b3dec4a81f397781d2b347996ec2ea4f2",
+   "sha256": "9de263b2ca120a32238b06b1789034786ceb02c500dacf90381ac41ae066deb6",
    "line": 0.0,
    "shingle": 0.0,
    "max_run": 0
@@ -1613,7 +1613,7 @@
    "max_run": 0
   },
   "plugins/agentic-sdlc/CHANGELOG.md": {
-   "sha256": "6297d3cb9bcc6824a381614913196fa274407ac3e9f0773328bfaeb58c456da9",
+   "sha256": "1172a029cd39211a4e3bd8cc6e5c4ba48e625b0892e437fd5570832f0d41cb1c",
    "line": 0.0,
    "shingle": 0.0,
    "max_run": 0

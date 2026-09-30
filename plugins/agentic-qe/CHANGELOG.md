@@ -6,6 +6,8 @@ Semantic Versioning and its own release tag (`agentic-qe-v<X.Y.Z>`).
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-09-30
+
 ### Fixed
 
 - **`eval-harness/references/python.md` had 7 dead cross-references.** It

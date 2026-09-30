@@ -1,6 +1,6 @@
 {
   "name": "agentic-os",
-  "version": "0.14.0",
+  "version": "0.15.0",
   "description": "The governance layer for coding agents. /agentic-init interviews you (role presets, HITL dial, stack) and scaffolds a governed multi-agent architecture into your repo: canonical agent contracts, enforcement hooks, escalation policies, instruction-quality gates, and generated stack-specific agents.",
   "author": {
     "name": "Yaroslav Krivushenko",
