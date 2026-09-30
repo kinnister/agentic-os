@@ -209,7 +209,7 @@
     var items = [
       { step: 1, k: 'editor', label: ed + ' installed (app opens)' },
       { step: 1, k: 'git', label: 'Git installed — git --version answers' },
-      { step: 1, k: 'python', label: 'Python 3 installed — enforcement hooks need it' },
+      { step: 1, k: 'python', label: 'Python 3.10+ installed — enforcement hooks and the installer need it' },
       { step: 1, k: 'node', label: 'Node.js LTS installed' },
       editor === 'cursor'
         ? { step: 2, k: 'mkt', label: 'Custom marketplace added (URL ends in .git)' }
@@ -280,9 +280,9 @@
       { n: '2', name: 'Git', hint: isWin ? 'Keep every default the installer suggests' : 'Accept the Xcode command-line tools if prompted',
         check: 'git --version', url: isWin ? 'https://git-scm.com/download/win' : 'https://git-scm.com/download/mac',
         why: 'Version control — the safety net. The guardrails guarantee nothing changes without a diff you can review, and that only works inside a git repository.' },
-      { n: '3', name: 'Python 3', hint: isWin ? 'Tick “Add Python to PATH” on the first screen' : 'Run the .pkg installer',
+      { n: '3', name: 'Python 3.10+', hint: isWin ? 'Tick “Add Python to PATH” on the first screen' : 'Run the .pkg installer — the Python 3.9 that ships with macOS is too old',
         check: isWin ? 'python --version' : 'python3 --version', url: 'https://www.python.org/downloads/',
-        why: 'The enforcement hooks — the actual guardrails, not just prompts — are small Python scripts. No Python, no enforcement.' },
+        why: 'The enforcement hooks — the actual guardrails, not just prompts — are small Python scripts, and the installer runtime needs Python 3.10 or newer. No Python, no enforcement.' },
       { n: '4', name: 'Node.js LTS', hint: 'Pick the LTS build', check: 'node --version', url: 'https://nodejs.org/en/download/',
         why: 'The SDLC health check (sdlc-preflight) runs on Node. One install; you’ll never touch it directly again.' }
     ];

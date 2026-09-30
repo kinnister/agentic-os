@@ -7,6 +7,24 @@ Semantic Versioning. The plugin version lives in
 
 ## [Unreleased]
 
+## [0.15.0] — 2026-09-30
+
+### Highlights
+
+- **Uninstall keeps files you had before agentic-os.** `agentic-uninstall
+  --all` could delete a `CLAUDE.md` or `.claude/settings.json` that existed
+  before install. Such files are now never deleted, even when a removal is
+  confirmed.
+- **Setup, upgrade and uninstall write through a journaled installer**
+  (`runtime/run.py`). Your edits are never overwritten, and merges into your
+  existing files apply only to the bytes you were shown. In Claude Code you
+  approve installer commands rather than each file.
+- **Requires Python 3.10 or newer.** The shared runtime declares
+  `python >= 3.10`; the Python 3.9 bundled with macOS is not enough. Install a
+  current Python from python.org or Homebrew.
+- **Experimental shared runtime.** The SQLite lifecycle runtime for SDLC runs
+  ships, but the workflow skills do not start managed runs yet.
+
 ### Runtime and installer reliability
 
 - agentic-upgrade explains how to refresh an existing `.ao-new` merge file

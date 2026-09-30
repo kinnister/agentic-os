@@ -43,7 +43,7 @@ package is broken, the fix is a **new** version, not a redo of the old one.
 3. **The MCP Registry namespace case has already been confirmed — read this
    before touching it again.** `mcp/package.json`'s `mcpName` and
    `mcp/server.json`'s `name` are both `io.github.kinnister/agentic-os`
-   (capital `J`), matching the real GitHub owner login exactly.
+   (all lowercase), matching the real GitHub owner login exactly.
 
    **How this was confirmed, and why "run `mcp-publisher login github` and
    see what it prints" does not work:** `login` only ever prints

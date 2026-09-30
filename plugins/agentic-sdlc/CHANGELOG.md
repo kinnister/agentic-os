@@ -6,6 +6,8 @@ uses Semantic Versioning and its own release tag (`agentic-sdlc-v<X.Y.Z>`).
 
 ## [Unreleased]
 
+## [0.8.0] — 2026-09-30
+
 ### Runtime and installer reliability
 
 - When uninstall keeps a file, its journal entry now records the bytes and
@@ -94,6 +96,17 @@ uses Semantic Versioning and its own release tag (`agentic-sdlc-v<X.Y.Z>`).
   external-action reconciliation, and revision-labelled exports.
 
 - Bundle the canonical versioned runtime contracts for independent installation, with deterministic drift checks and strict policy/input validation.
+
+### Changed
+
+- **Owner links point at `kinnister`.** The GitHub account was renamed from
+  `Jarroslav` to `kinnister`; author, homepage and repository URLs follow it.
+
+## [0.7.0] — 2026-07-31
+
+Also covers 0.6.0 (2026-07-31), which shipped without its own heading.
+
+### Added
 
 - **`usage.sampled` is now a real event, not just a reserved shape.**
   `references/model-routing.md` documented this event ("Usage sampling (spec
@@ -247,9 +260,6 @@ uses Semantic Versioning and its own release tag (`agentic-sdlc-v<X.Y.Z>`).
   not this field.)
 
 ### Changed
-
-- **Owner links point at `kinnister`.** The GitHub account was renamed from
-  `Jarroslav` to `kinnister`; author, homepage and repository URLs follow it.
 
 - **The two adapter sections are named for what they govern.** `## MR Adapter`
   used GitLab's noun for a section the spec itself always describes as "MR/PR",

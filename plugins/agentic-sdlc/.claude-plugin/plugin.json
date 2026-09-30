@@ -1,6 +1,6 @@
 {
   "name": "agentic-sdlc",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Runs coding agents through a governed delivery lifecycle: plants a repo-guides documentation baseline, drafts stories from raw asks, and carries the work through requirements, spec, plan, build, and QA stages behind gate-arbiter judgment gates (spec.approved, plan.approved, qa.drift, code-review.final, requirements.ambiguous). Opens the resulting merge or pull request through whatever adapter the repo configures and keeps mr-watch on it until it lands. Folds outcomes back into the guides via guide-sync's learning capture, and ships sdlc.html so the pipeline stages are visible at a glance.",
   "author": {
     "name": "Yaroslav Krivushenko",

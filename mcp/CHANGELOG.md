@@ -8,6 +8,14 @@ Releases are tagged `agentic-os-mcp-v<X.Y.Z>`.
 
 ## [Unreleased]
 
+## [0.3.2] — 2026-09-30
+
+### Changed
+- **Served content refreshed** for `agentic-os` 0.15.0, `agentic-sdlc` 0.8.0
+  and `agentic-qe` 0.2.0: the journaled installer and shared runtime contracts,
+  the uninstall fix that keeps pre-existing files, and the owner rename to
+  `kinnister`. No server code changes.
+
 ## [0.3.1]
 
 ### Changed
