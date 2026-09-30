@@ -248,6 +248,9 @@ uses Semantic Versioning and its own release tag (`agentic-sdlc-v<X.Y.Z>`).
 
 ### Changed
 
+- **Owner links point at `kinnister`.** The GitHub account was renamed from
+  `Jarroslav` to `kinnister`; author, homepage and repository URLs follow it.
+
 - **The two adapter sections are named for what they govern.** `## MR Adapter`
   used GitLab's noun for a section the spec itself always describes as "MR/PR",
   and `## Ticket Adapter` used a tracker-flavoured noun while its own reference
