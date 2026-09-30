@@ -22,6 +22,9 @@ Semantic Versioning. The plugin version lives in
 
 ### Changed
 
+- **Owner links point at `kinnister`.** The GitHub account was renamed from
+  `Jarroslav` to `kinnister`; author, homepage and repository URLs follow it.
+
 - **Presets and the agent registry follow the `agentic-sdlc` skill renames.**
   Role presets claim skills by name and `agent-registry.md.tmpl` routes to them
   by name, so both moved in lockstep with the rename documented in the

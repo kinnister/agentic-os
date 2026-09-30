@@ -67,6 +67,9 @@ Semantic Versioning and its own release tag (`agentic-qe-v<X.Y.Z>`).
 
 ### Changed
 
+- **Owner links point at `kinnister`.** The GitHub account was renamed from
+  `Jarroslav` to `kinnister`; author, homepage and repository URLs follow it.
+
 - **Seam sentences on seven blueprints whose descriptions competed.** Selection
   quality degrades as descriptions overlap, so each contested pair now says
   plainly which one to reach for: `risk-based-selection` (budget-constrained,
