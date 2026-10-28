@@ -5,6 +5,7 @@
 [![Install: Claude Code plugin](https://img.shields.io/badge/install-Claude%20Code%20plugin-5A2EBB)](#install)
 [![Install: Cursor plugin](https://img.shields.io/badge/install-Cursor%20plugin-000000)](#install)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+[![npm](https://img.shields.io/npm/v/agentic-os-mcp)](https://www.npmjs.com/package/agentic-os-mcp)
 [![Agentic OS MCP server](https://mcprush.com/badge/agentic-os-mcp/card.svg)](https://mcprush.com/to/agentic-os-mcp?ref=badge)
 [![agentic-os-mcp MCP server – quality and maintenance score on Glama](https://glama.ai/mcp/servers/kinnister/agentic-os/badges/card.svg)](https://glama.ai/mcp/servers/kinnister/agentic-os)
 
