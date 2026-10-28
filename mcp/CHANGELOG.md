@@ -8,6 +8,12 @@ Releases are tagged `agentic-os-mcp-v<X.Y.Z>`.
 
 ## [Unreleased]
 
+## [0.3.3] — 2026-10-28
+
+### Changed
+- **Package README** now carries the MCP server and Glama quality badges, so the
+  npm page matches the repository. No server code changes.
+
 ## [0.3.2] — 2026-09-30
 
 ### Changed
