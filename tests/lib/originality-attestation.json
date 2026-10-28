@@ -1,7 +1,7 @@
 {
  "schema": 1,
  "_doc": "Committed record of the originality check's per-file results (tests/lib/check-provenance.py). Holds no corpus fingerprints and no salt \u2014 only this repo's own file hashes and the scores they scored. Refresh with --attest after a local --build; CI re-checks it with --verify-attestation, which needs no corpus.",
- "attested_at": "2026-10-28T14:40:42Z",
+ "attested_at": "2026-10-28T14:51:45Z",
  "corpus_file_count": 1892,
  "store_id": "f71a506b3b67fbea651ccf2c01de780da08511c9cd3332402074e681373d6671",
  "salt_id": "21ba8718bed062a6",
@@ -179,7 +179,7 @@
    "max_run": 0
   },
   "mcp/CHANGELOG.md": {
-   "sha256": "392377bbae1af0f4200295bbc08a894db2dc7981a44d921b5192d00facb34d38",
+   "sha256": "4a79d06dd11358fca8b23303ada8ff8f7b4c3fe88792a211459f3088744b65a9",
    "line": 0.0,
    "shingle": 0.0,
    "max_run": 0
@@ -203,13 +203,13 @@
    "max_run": 0
   },
   "mcp/manifest.json": {
-   "sha256": "d721a85d302efe12b54cad3df7dcee49fd470c53fa3b13efd5db89fcc7641a96",
+   "sha256": "e826267166a2141b146df63e4069e0ca08947b9852b1f1db34d3d057d7131b6d",
    "line": 0.0,
    "shingle": 0.0,
    "max_run": 0
   },
   "mcp/package.json": {
-   "sha256": "3a6b04c2d2f6dcc273bb29de42fb5ab8597c1a6ef710f3161b2f86c790a3e773",
+   "sha256": "2c3d6a268cda29b7f9b75462a03969364c702a36632c99f78dfcf31e5199dff4",
    "line": 0.1818,
    "shingle": 0.0,
    "max_run": 0
@@ -239,7 +239,7 @@
    "max_run": 0
   },
   "mcp/server.json": {
-   "sha256": "225db8896e16a6a94fce26b2b55f5405f56a0f770082e0a0c19b01cebf7e862f",
+   "sha256": "50be6c1fb7451b03e0187dd1f7bf830fdfbeea2c0a9daa1dc91e5d3d71cd1e26",
    "line": 0.0,
    "shingle": 0.0,
    "max_run": 0
@@ -257,7 +257,7 @@
    "max_run": 0
   },
   "mcp/src/index.ts": {
-   "sha256": "a79a0482639f3398c3da502cf7183fbb647e53f49fa0f77dd74b1694cfd84322",
+   "sha256": "3c059a29736b377affd43efde4f4105f139af70b51bddd8bd1007a947559d430",
    "line": 0.0204,
    "shingle": 0.0,
    "max_run": 0
