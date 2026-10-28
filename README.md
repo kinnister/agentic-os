@@ -5,6 +5,7 @@
 [![Install: Claude Code plugin](https://img.shields.io/badge/install-Claude%20Code%20plugin-5A2EBB)](#install)
 [![Install: Cursor plugin](https://img.shields.io/badge/install-Cursor%20plugin-000000)](#install)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+[![Agentic OS MCP server](https://mcprush.com/badge/agentic-os-mcp/card.svg)](https://mcprush.com/to/agentic-os-mcp?ref=badge)
 
 **Turn your repo into a governed multi-agent setup in one interview** — scoped
 agent contracts, enforcement hooks (not just prompts), and optional SDLC
